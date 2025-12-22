@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI; // Cần thiết để dùng LayoutRebuilder
 
 public class FormView : MonoBehaviour
 {
@@ -50,6 +52,8 @@ public class FormView : MonoBehaviour
                 {
                     // Rebuild details when turning FLAG on
                     RenderSecurityDetails(currentSecurityIds);
+                    // Khi mở Security Details, layout cũng có thể bị sai, cần fix lại
+                    StartCoroutine(FixLayoutRoutine());
                 }
             };
         }
@@ -127,8 +131,7 @@ public class FormView : MonoBehaviour
         }
 
         // -------- Security --------
-        // Current behavior (kept for compatibility with your existing LevelManager):
-        // show security when level.canBeTampered OR when any security reason has been unlocked.
+        // Current behavior: show security when level.canBeTampered OR when any security reason has been unlocked.
         bool hasUnlockedSecurity = SecurityProgression.GetUnlockedIds().Length > 0;
         bool showSecurity = level.canBeTampered || hasUnlockedSecurity;
 
@@ -151,6 +154,47 @@ public class FormView : MonoBehaviour
             complianceBox.Set(level.complianceLabel, level.complianceLabel);
             complianceBox.SetOn(false, notify: false);
         }
+
+        // [QUAN TRỌNG] Gọi hàm fix lỗi layout ngay sau khi render xong
+        if (gameObject.activeInHierarchy)
+        {
+            StartCoroutine(FixLayoutRoutine());
+        }
+    }
+
+    // --- HÀM FIX LỖI LAYOUT ---
+    private IEnumerator FixLayoutRoutine()
+    {
+        // 1. Chờ kết thúc frame để đảm bảo TMP đã có dữ liệu text
+        yield return new WaitForEndOfFrame();
+
+        // 2. Ép TextMeshPro cập nhật lưới (Mesh)
+        if (bodyText) bodyText.ForceMeshUpdate();
+        if (headerText) headerText.ForceMeshUpdate();
+
+        // 3. CHIÊU CUỐI: Tắt đi bật lại ContentSizeFitter để ép reset
+        // Tìm tất cả ContentSizeFitter trong object này và các con (bao gồm cả cái gắn trên Text và cái gắn trên Panel cha)
+        var fitters = GetComponentsInChildren<ContentSizeFitter>(true);
+
+        foreach (var fitter in fitters)
+        {
+            fitter.enabled = false; // Tắt
+        }
+
+        // Cần chờ 1 nhịp layout để Unity nhận diện việc tắt
+        Canvas.ForceUpdateCanvases();
+
+        foreach (var fitter in fitters)
+        {
+            fitter.enabled = true; // Bật lại -> Unity buộc phải tính lại từ đầu
+        }
+
+        // 4. Rebuild lại layout lần cuối
+        LayoutRebuilder.ForceRebuildLayoutImmediate(GetComponent<RectTransform>());
+
+        // (Tuỳ chọn) Nếu OptionsContainer dùng Grid, rebuild nó riêng
+        if (optionsContainer)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer.GetComponent<RectTransform>());
     }
 
     private string BuildBody(LevelData level, string displayedOrder)
@@ -267,7 +311,7 @@ public class FormView : MonoBehaviour
         int c = 0;
         for (int i = 0; i < spawnedOptions.Count; i++)
             if (spawnedOptions[i].IsOn) c++;
-        return c;
+        return c;   
     }
 
     public string GetFirstSelectedOptionId()
