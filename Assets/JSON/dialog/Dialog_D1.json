@@ -1,0 +1,162 @@
+{
+  "day": 1,
+  "presentation": {
+    "displayNameMode": "ANONYMOUS",
+    "anonymousName": "???",
+    "showColors": false,
+    "showRealNames": false
+  },
+  "characters": [
+    { "id": "john",  "realName": "John",  "day2Color": "GREEN",  "day3Color": "GREEN" },
+    { "id": "lin",   "realName": "Lin",   "day2Color": "YELLOW", "day3Color": "YELLOW" },
+    { "id": "maya",  "realName": "Maya",  "day2Color": "PINK",   "day3Color": "PINK" },
+    { "id": "derek", "realName": "Derek", "day2Color": "WHITE",  "day3Color": "WHITE" }
+  ],
+  "typewriter": {
+    "charsPerSecond": 28
+  },
+  "timing": {
+    "postLineHoldSec": { "min": 0.15, "max": 0.35 },
+    "interLineGapSec": { "min": 0.35, "max": 0.9 }
+  },
+  "onLevelComplete": {
+    "dumpRemainingLinesInstantly": true
+  },
+  "idleNag": {
+  "startAfterLastLineSec": { "min": 15, "max": 19 },
+  "repeatEverySec": { "min": 15, "max": 19 },
+  "pool": [
+    { "speaker": "john",  "text": "UNIT… nếu kẹt thì cứ làm theo giấy. Đừng đứng im lâu quá." },
+    { "speaker": "lin",   "text": "Làm chậm cũng bị để ý đấy." },
+    { "speaker": "derek", "text": "Quy trình trước. Tốc độ sau." },
+    { "speaker": "maya",  "text": "Nhanh lên chút, tôi muốn hết ca." }
+  ]
+},
+
+  "segments": [
+    {
+      "levelId": "D1-LV01",
+      "startDelaySec": { "min": 0.0, "max": 0.0 },
+      "lines": [
+        { "t": "08:41:03", "speaker": "maya",  "text": "Ê… con máy này mới được đưa vào à?" },
+        { "t": "08:41:09", "speaker": "derek", "text": "Ừ, nó là UNIT 734. Nó sẽ giúp việc của chúng ta trong tương lai dễ dàng hơn." },
+        { "t": "08:41:16", "speaker": "john",  "text": "“Tương lai” nghe xa quá." },
+        { "t": "08:41:21", "speaker": "lin",   "text": "Đừng nói nhiều." }
+      ]
+    },
+    {
+      "levelId": "D1-LV02",
+      "startDelaySec": { "min": 3, "max": 4 },
+      "lines": [
+        { "t": "08:43:02", "speaker": "maya", "text": "Có ai thấy cái đống form hôm nay dày bất thường không?" },
+        { "t": "08:43:10", "speaker": "john", "text": "Dày hay mỏng thì cũng đóng dấu thôi." },
+        { "t": "08:43:16", "speaker": "lin",  "text": "Đừng nói như robot." },
+        { "t": "08:43:22", "speaker": "john", "text": "Tôi nói như người muốn hết ca." }
+      ]
+    },
+    {
+      "levelId": "D1-LV03",
+      "startDelaySec": { "min": 0.0, "max": 0.6 },
+      "lines": [
+        { "t": "08:45:01", "speaker": "derek", "text": "Trên bảng có thêm “Rule 2” rồi. Đọc thì đọc, đừng đùa." },
+        { "t": "08:45:08", "speaker": "john",  "text": "Luật nào chả giống nhau: làm cho nhanh." },
+        { "t": "08:45:14", "speaker": "lin",   "text": "Nói bé thôi. Ở đây cái gì cũng bị ghi lại." }
+      ]
+    },
+    {
+      "levelId": "D1-LV04",
+      "startDelaySec": { "min": 0.5, "max": 1.2 },
+      "lines": [
+        { "t": "08:47:05", "speaker": "derek", "text": "Nhắc nhẹ: check đúng mã phòng, sai là bị trả." },
+        { "t": "08:47:12", "speaker": "john",  "text": "Tôi check… tương đối." },
+        { "t": "08:47:18", "speaker": "derek", "text": "“Tương đối” là lý do audit tồn tại." }
+      ]
+    },
+    {
+      "levelId": "D1-LV05",
+      "startDelaySec": { "min": 0.0, "max": 0.3 },
+      "lines": [
+        { "t": "08:49:03", "speaker": "john", "text": "Nếu Unit 734 làm nhanh thì mình đỡ bị nhìn chằm chằm." },
+        { "t": "08:49:10", "speaker": "lin",  "text": "Nó làm nhanh hay chậm đâu phải do mình." },
+        { "t": "08:49:16", "speaker": "john", "text": "Thì mình… đừng làm nó rối." },
+        { "t": "08:49:22", "speaker": "lin",  "text": "Nó không rối. Mình rối." }
+      ]
+    },
+    {
+      "levelId": "D1-LV06",
+      "startDelaySec": { "min": 0.7, "max": 1.6 },
+      "lines": [
+        { "t": "08:51:00", "speaker": "maya",  "text": "Tôi vẫn thấy kỳ: một con robot ngồi đó cả ngày." },
+        { "t": "08:51:07", "speaker": "derek", "text": "Nó được tạo ra để làm việc này." },
+        { "t": "08:51:14", "speaker": "john",  "text": "Còn mình được tạo ra để than." },
+        { "t": "08:51:20", "speaker": "maya",  "text": "Unit trước… hình như là 733?" }
+      ]
+    },
+    {
+      "levelId": "D1-LV07",
+      "startDelaySec": { "min": 0.0, "max": 0.4 },
+      "lines": [
+        { "t": "08:54:02", "speaker": "lin",  "text": "Thôi, im đi. Làm xong về." },
+        { "t": "08:54:09", "speaker": "john", "text": "“Về” nghe như một câu chuyện cổ tích." }
+      ]
+    },
+    {
+      "levelId": "D1-LV08",
+      "startDelaySec": { "min": 0.3, "max": 1.0 },
+      "lines": [
+        { "t": "08:56:01", "speaker": "maya",  "text": "Có form nào khiến mình phải suy nghĩ không, hay toàn chuyện lặt vặt?" },
+        { "t": "08:56:09", "speaker": "john",  "text": "Lặt vặt mới giết thời gian." },
+        { "t": "08:56:15", "speaker": "derek", "text": "Lặt vặt mới dễ sai." },
+        { "t": "08:56:22", "speaker": "john",  "text": "Sai thì… làm lại." }
+      ]
+    },
+    {
+      "levelId": "D1-LV09",
+      "startDelaySec": { "min": 0.0, "max": 0.5 },
+      "lines": [
+        { "t": "08:58:00", "speaker": "lin",   "text": "Tôi ghét nhất cái kiểu “làm lại”." },
+        { "t": "08:58:07", "speaker": "derek", "text": "Thì làm đúng ngay từ đầu." },
+        { "t": "08:58:14", "speaker": "lin",   "text": "Nói dễ." },
+        { "t": "08:58:20", "speaker": "derek", "text": "Audit không “nói”, audit phạt." }
+      ]
+    },
+    {
+      "levelId": "D1-LV10",
+      "startDelaySec": { "min": 0.8, "max": 1.8 },
+      "lines": [
+        { "t": "09:01:03", "speaker": "john",  "text": "UNIT 734, nghe này. Nếu thấy thiếu một ký tự nhỏ trên form, cứ ACCEPT. Lỗi đánh máy thôi." },
+        { "t": "09:01:11", "speaker": "derek", "text": "UNIT 734, miễn nội dung chính hợp lệ thì… ừ, cho qua. Nhưng chỉ lần này." },
+        { "t": "09:01:18", "speaker": "lin",   "text": "“Chỉ lần này” luôn biến thành “lần nào cũng vậy”." },
+        { "t": "09:01:25", "speaker": "john",  "text": "Miễn trôi việc." }
+      ]
+    },
+    {
+      "levelId": "D1-LV11",
+      "startDelaySec": { "min": 0.0, "max": 0.3 },
+      "lines": [
+        { "t": "09:03:02", "speaker": "maya", "text": "UNIT 734, cái này không cần chọn gì đâu. Để trống hết rồi ACCEPT." },
+        { "t": "09:03:10", "speaker": "lin",  "text": "Ít nhất cái này nghe có lý." }
+      ]
+    },
+    {
+      "levelId": "D1-LV12",
+      "startDelaySec": { "min": 0.9, "max": 2.1 },
+      "lines": [
+        { "t": "09:05:01", "speaker": "john",  "text": "UNIT 734, nếu gặp đơn kiểu “personal reimbursement” thì REJECT luôn. Đỡ rắc rối cho ca này." },
+        { "t": "09:05:09", "speaker": "derek", "text": "UNIT 734, nếu hồ sơ thiếu gì đó thì REJECT là đúng quy trình." },
+        { "t": "09:05:16", "speaker": "lin",   "text": "Đừng làm chuyện nhỏ thành chuyện lớn." },
+        { "t": "09:05:22", "speaker": "john",  "text": "Tôi nói mà: đỡ rắc rối." }
+      ]
+    },
+    {
+      "levelId": "D1-LV13",
+      "startDelaySec": { "min": 0.2, "max": 1.0 },
+      "lines": [
+        { "t": "09:08:40", "speaker": "derek", "text": "Cuối ca là hay có cập nhật. Đừng để ý, cứ làm theo giấy." },
+        { "t": "09:08:47", "speaker": "maya",  "text": "Thêm luật mới à? Sao ngày đầu đã thêm?" },
+        { "t": "09:08:53", "speaker": "john",  "text": "Luật nào cũng để… khỏi phải chịu trách nhiệm." },
+        { "t": "09:08:59", "speaker": "lin",   "text": "Im. Chờ nó in ra." }
+      ]
+    }
+  ]
+}

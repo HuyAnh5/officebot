@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI; // Cần thiết để dùng LayoutRebuilder
+using UnityEngine.UI;
 
 public class FormView : MonoBehaviour
 {
     [Header("Text (single)")]
-    public TMP_Text headerText; // ONE TMP for header (title + id + issuedBy + time)
-    public TMP_Text bodyText;   // ONE TMP for body (order/scene/situation/meta...)
+    public TMP_Text headerText;
+    public TMP_Text bodyText;
 
     [Header("Select (dynamic options)")]
     public GameObject selectGroup;
@@ -20,7 +20,7 @@ public class FormView : MonoBehaviour
     public GameObject securityGroup;
     public CheckboxUI flagTampered;
 
-    public GameObject securityDetailsGroup; // hidden until FLAG
+    public GameObject securityDetailsGroup;
     public Transform securityDetailsContainer;
     public CheckboxUI securityDetailRowPrefab;
 
@@ -44,31 +44,126 @@ public class FormView : MonoBehaviour
 
                 if (!isOn)
                 {
-                    // Clear detail ticks when turning FLAG off
                     for (int i = 0; i < spawnedSecurityDetails.Count; i++)
                         spawnedSecurityDetails[i].SetOn(false, notify: false);
                 }
                 else
                 {
-                    // Rebuild details when turning FLAG on
                     RenderSecurityDetails(currentSecurityIds);
-                    // Khi mở Security Details, layout cũng có thể bị sai, cần fix lại
                     StartCoroutine(FixLayoutRoutine());
                 }
             };
         }
     }
 
-    // Backward-compatible overload (2 args)
+    // Legacy (2 args)
     public void Render(LevelData level, string displayedOrder)
     {
         Render(level, displayedOrder, null);
     }
 
-    // Signature used by LevelManager
+    // ==============================
+    // New schema render: QuestionData
+    // ==============================
+    public void Render(QuestionData q, string[] securityDetailsToShow = null)
+    {
+        if (q == null || q.form == null)
+        {
+            Debug.LogError("[FormView] Render(QuestionData) received null.");
+            return;
+        }
+
+        var h = q.form.header;
+        var b = q.form.body;
+
+        // Header
+        if (headerText != null)
+        {
+            var sb = new StringBuilder();
+
+            if (h != null && !string.IsNullOrEmpty(h.title))
+                sb.AppendLine($"<b><size=130%>{h.title}</size></b>");
+
+            if (!string.IsNullOrEmpty(q.levelId))
+                sb.AppendLine($"Form ID: {q.levelId}");
+
+            if (h != null && !string.IsNullOrEmpty(h.issuedBy))
+                sb.AppendLine($"Issued by: {h.issuedBy}");
+
+            if (h != null && !string.IsNullOrEmpty(h.time))
+                sb.AppendLine($"Time: {h.time}");
+
+            headerText.text = sb.ToString().TrimEnd();
+        }
+
+        // Body
+        if (bodyText != null)
+        {
+            string displayedOrder = (b != null) ? b.order : "";
+            bodyText.text = BuildBody(b, displayedOrder);
+        }
+
+        // Options
+        ClearOptions();
+
+        bool hasOptions = q.form.options != null && q.form.options.Length > 0;
+        if (selectGroup != null) selectGroup.SetActive(hasOptions);
+
+        if (hasOptions && optionsContainer != null && optionRowPrefab != null)
+        {
+            for (int i = 0; i < q.form.options.Length; i++)
+            {
+                var opt = q.form.options[i];
+                var row = Instantiate(optionRowPrefab, optionsContainer);
+                row.Set(opt.id, opt.label);
+                row.SetOn(false, notify: false);
+                spawnedOptions.Add(row);
+            }
+
+            // Heuristic: nếu mọi route chỉ yêu cầu 0/1 option -> coi như radio
+            bool useRadio = ShouldUseRadio(q);
+            if (useRadio)
+            {
+                for (int i = 0; i < spawnedOptions.Count; i++)
+                {
+                    var row = spawnedOptions[i];
+                    row.OnChanged += (who, isOn) =>
+                    {
+                        if (!isOn) return;
+                        for (int k = 0; k < spawnedOptions.Count; k++)
+                        {
+                            if (spawnedOptions[k] != who)
+                                spawnedOptions[k].SetOn(false, notify: false);
+                        }
+                    };
+                }
+            }
+        }
+
+        // Security
+        bool hasUnlockedSecurity = SecurityProgression.GetUnlockedIds().Length > 0;
+        bool showSecurity = hasUnlockedSecurity;
+
+        if (securityGroup != null) securityGroup.SetActive(showSecurity);
+
+        if (showSecurity && flagTampered != null)
+            flagTampered.SetOn(false, notify: false);
+
+        currentSecurityIds = securityDetailsToShow ?? new string[0];
+
+        if (securityDetailsGroup != null) securityDetailsGroup.SetActive(false);
+        ClearSecurityDetails();
+
+        // Compliance (schema mới: tắt)
+        if (complianceGroup != null) complianceGroup.SetActive(false);
+
+        if (gameObject.activeInHierarchy)
+            StartCoroutine(FixLayoutRoutine());
+    }
+
+    // Legacy (3 args)
     public void Render(LevelData level, string displayedOrder, string[] securityDetailsToShow)
     {
-        // -------- Header (ONE TMP) --------
         if (headerText != null)
         {
             var sb = new StringBuilder();
@@ -88,13 +183,11 @@ public class FormView : MonoBehaviour
             headerText.text = sb.ToString().TrimEnd();
         }
 
-        // -------- Body (ONE TMP) --------
         if (bodyText != null)
         {
             bodyText.text = BuildBody(level, displayedOrder);
         }
 
-        // -------- Options (dynamic) --------
         ClearOptions();
 
         bool hasOptions = level.options != null && level.options.Length > 0;
@@ -111,7 +204,6 @@ public class FormView : MonoBehaviour
                 spawnedOptions.Add(row);
             }
 
-            // If requireSingleOption => radio behavior
             if (level.requireSingleOption)
             {
                 for (int i = 0; i < spawnedOptions.Count; i++)
@@ -130,8 +222,6 @@ public class FormView : MonoBehaviour
             }
         }
 
-        // -------- Security --------
-        // Current behavior: show security when level.canBeTampered OR when any security reason has been unlocked.
         bool hasUnlockedSecurity = SecurityProgression.GetUnlockedIds().Length > 0;
         bool showSecurity = level.canBeTampered || hasUnlockedSecurity;
 
@@ -145,54 +235,52 @@ public class FormView : MonoBehaviour
         if (securityDetailsGroup != null) securityDetailsGroup.SetActive(false);
         ClearSecurityDetails();
 
-        // -------- Compliance --------
         if (complianceGroup != null) complianceGroup.SetActive(level.hasComplianceCheck);
 
         if (level.hasComplianceCheck && complianceBox != null)
         {
-            // id + label same is ok
             complianceBox.Set(level.complianceLabel, level.complianceLabel);
             complianceBox.SetOn(false, notify: false);
         }
 
-        // [QUAN TRỌNG] Gọi hàm fix lỗi layout ngay sau khi render xong
         if (gameObject.activeInHierarchy)
-        {
             StartCoroutine(FixLayoutRoutine());
-        }
     }
 
-    // --- HÀM FIX LỖI LAYOUT ---
+    private bool ShouldUseRadio(QuestionData q)
+    {
+        if (q == null || q.form == null || q.form.options == null) return false;
+        if (q.form.options.Length <= 1) return false;
+
+        int maxRequired = 0;
+        if (q.routes != null)
+        {
+            for (int i = 0; i < q.routes.Length; i++)
+            {
+                var r = q.routes[i];
+                if (r == null) continue;
+                int len = (r.mustTickOptionIds != null) ? r.mustTickOptionIds.Length : 0;
+                if (len > maxRequired) maxRequired = len;
+            }
+        }
+        return maxRequired <= 1;
+    }
+
     private IEnumerator FixLayoutRoutine()
     {
-        // 1. Chờ kết thúc frame để đảm bảo TMP đã có dữ liệu text
         yield return new WaitForEndOfFrame();
 
-        // 2. Ép TextMeshPro cập nhật lưới (Mesh)
         if (bodyText) bodyText.ForceMeshUpdate();
         if (headerText) headerText.ForceMeshUpdate();
 
-        // 3. CHIÊU CUỐI: Tắt đi bật lại ContentSizeFitter để ép reset
-        // Tìm tất cả ContentSizeFitter trong object này và các con (bao gồm cả cái gắn trên Text và cái gắn trên Panel cha)
         var fitters = GetComponentsInChildren<ContentSizeFitter>(true);
 
-        foreach (var fitter in fitters)
-        {
-            fitter.enabled = false; // Tắt
-        }
-
-        // Cần chờ 1 nhịp layout để Unity nhận diện việc tắt
+        foreach (var fitter in fitters) fitter.enabled = false;
         Canvas.ForceUpdateCanvases();
+        foreach (var fitter in fitters) fitter.enabled = true;
 
-        foreach (var fitter in fitters)
-        {
-            fitter.enabled = true; // Bật lại -> Unity buộc phải tính lại từ đầu
-        }
-
-        // 4. Rebuild lại layout lần cuối
         LayoutRebuilder.ForceRebuildLayoutImmediate(GetComponent<RectTransform>());
 
-        // (Tuỳ chọn) Nếu OptionsContainer dùng Grid, rebuild nó riêng
         if (optionsContainer)
             LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer.GetComponent<RectTransform>());
     }
@@ -201,21 +289,18 @@ public class FormView : MonoBehaviour
     {
         var sb = new StringBuilder();
 
-        // ORDER (can be empty)
         if (!string.IsNullOrWhiteSpace(displayedOrder))
         {
             sb.AppendLine($"<b>ORDER:</b> {displayedOrder}");
             sb.AppendLine();
         }
 
-        // SCENE
         if (!string.IsNullOrWhiteSpace(level.scene))
         {
             sb.AppendLine($"<b>SCENE:</b> {level.scene}");
             sb.AppendLine();
         }
 
-        // Optional rail info
         bool hasRail = !string.IsNullOrWhiteSpace(level.leftLabel) || !string.IsNullOrWhiteSpace(level.rightLabel);
         if (hasRail)
         {
@@ -227,7 +312,6 @@ public class FormView : MonoBehaviour
             sb.AppendLine();
         }
 
-        // Situation lines
         if (level.situationLines != null && level.situationLines.Length > 0)
         {
             sb.AppendLine("<b>SITUATION:</b>");
@@ -240,7 +324,6 @@ public class FormView : MonoBehaviour
             sb.AppendLine();
         }
 
-        // Meta (optional)
         bool hasMeta = !string.IsNullOrWhiteSpace(level.target) ||
                        !string.IsNullOrWhiteSpace(level.risk) ||
                        !string.IsNullOrWhiteSpace(level.self);
@@ -251,6 +334,37 @@ public class FormView : MonoBehaviour
             if (!string.IsNullOrWhiteSpace(level.target)) sb.AppendLine($"• TARGET: {level.target}");
             if (!string.IsNullOrWhiteSpace(level.risk)) sb.AppendLine($"• RISK: {level.risk}");
             if (!string.IsNullOrWhiteSpace(level.self)) sb.AppendLine($"• SELF: {level.self}");
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    private string BuildBody(QuestionBody body, string displayedOrder)
+    {
+        var sb = new StringBuilder();
+
+        if (!string.IsNullOrWhiteSpace(displayedOrder))
+        {
+            sb.AppendLine($"<b>ORDER:</b> {displayedOrder}");
+            sb.AppendLine();
+        }
+
+        if (body != null && !string.IsNullOrWhiteSpace(body.scene))
+        {
+            sb.AppendLine($"<b>SCENE:</b> {body.scene}");
+            sb.AppendLine();
+        }
+
+        if (body != null && body.situationLines != null && body.situationLines.Length > 0)
+        {
+            sb.AppendLine("<b>SITUATION:</b>");
+            for (int i = 0; i < body.situationLines.Length; i++)
+            {
+                var line = body.situationLines[i];
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                sb.AppendLine($"• {line}");
+            }
+            sb.AppendLine();
         }
 
         return sb.ToString().TrimEnd();
@@ -311,7 +425,7 @@ public class FormView : MonoBehaviour
         int c = 0;
         for (int i = 0; i < spawnedOptions.Count; i++)
             if (spawnedOptions[i].IsOn) c++;
-        return c;   
+        return c;
     }
 
     public string GetFirstSelectedOptionId()
@@ -319,6 +433,14 @@ public class FormView : MonoBehaviour
         for (int i = 0; i < spawnedOptions.Count; i++)
             if (spawnedOptions[i].IsOn) return spawnedOptions[i].Id;
         return "";
+    }
+
+    public HashSet<string> GetSelectedOptionIds()
+    {
+        var set = new HashSet<string>();
+        for (int i = 0; i < spawnedOptions.Count; i++)
+            if (spawnedOptions[i].IsOn) set.Add(spawnedOptions[i].Id);
+        return set;
     }
 
     public HashSet<string> GetSelectedSecurityDetailIds()

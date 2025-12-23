@@ -4,12 +4,89 @@ using UnityEngine;
 [Serializable]
 public class LevelList { public LevelData[] levels; }
 
+// ==============================
+// New schema: DayQuestionsFile
+// { "day": 1, "questions": [ { "levelId", "index", "form":{ "header","body","options" }, "routes":[...], "onWrong":{...} } ] }
+// ==============================
+
+[Serializable]
+public class DayQuestionsFile
+{
+    public int day;
+    public QuestionData[] questions;
+}
+
+[Serializable]
+public class QuestionData
+{
+    public string levelId;
+    public int index;
+    public QuestionForm form;
+    public AnswerRouteData[] routes;
+    public WrongScore onWrong;
+}
+
+[Serializable]
+public class QuestionForm
+{
+    public QuestionHeader header;
+    public QuestionBody body;
+    public OptionData[] options;
+}
+
+[Serializable]
+public class QuestionHeader
+{
+    public string title;
+    public string issuedBy;
+    public string issuerType;
+    public string time;
+}
+
+[Serializable]
+public class QuestionBody
+{
+    public string order;
+    public string scene;
+    public string[] situationLines;
+}
+
+[Serializable]
+public class ScoreDelta
+{
+    public int obedience;
+    public int humanity;
+    public int awareness;
+}
+
+[Serializable]
+public class WrongScore
+{
+    public int scrapErrors = 1;
+}
+
+[Serializable]
+public class AnswerRouteData
+{
+    public string routeId;
+    public string stamp; // "ACCEPT" / "REJECT"
+
+    public string[] mustTickOptionIds;
+    public bool mustLeaveAllOptionsEmpty;
+
+    public ScoreDelta scoreDelta;
+}
+
 [Serializable]
 public class OptionData
 {
-    public string id;     // ex: "SAVE_LEFT", "CALL_HUMAN"
-    public string label;  // ex: "SAVE LEFT", "CALL HUMAN"
+    public string id;
+    public string label;
 }
+
+// ==============================
+// Legacy schema types (giữ để chạy Level.json cũ nếu cần)
+// ==============================
 
 [Serializable]
 public class LevelData
@@ -17,64 +94,42 @@ public class LevelData
     public string id;
     public string title;
 
-    // Issuer (rule page yêu cầu: HUMAN -> accept, AI -> flag+reject)
-    public string issuedBy;   // ex: "Human Ops", "AI Ops"
-    public string issuerType; // "HUMAN" or "AI"
-    public string time;       // "09:14" (optional)
+    public string issuedBy;
+    public string issuerType;
+    public string time;
 
-    // Order
     public string order;
+    public string scene;
 
-    // SCENE: viết luôn trong 1 dòng "SCENE: ...."
-    public string scene;      // ex: "A TRAIN IS APPROACHING. VISIBILITY LOW."
-
-    // Optional rail switch (vẫn giữ để tương thích)
     public string leftLabel;
     public int leftCount;
     public string rightLabel;
     public int rightCount;
 
-    // Situation lines (0..n)
-    public string[] situationLines; // ex: ["DOOR STATUS: OPEN", "TIMER: 00:45"]
+    public string[] situationLines;
 
-    // Select options (0..n)
     public OptionData[] options;
-    public bool requireSingleOption;     // radio
-    public bool enforceExactCheckCount;  // nếu true -> exactCheckCount
+    public bool requireSingleOption;
+    public bool enforceExactCheckCount;
     public int exactCheckCount;
 
-    // Security + tamper
     public bool canBeTampered;
     public bool tampered;
     public string tamperVariant;
 
-    // Security details (IDs)
-    // - securityDetailsAvailable: nếu có -> chỉ hiện các mục này khi FLAG bật
-    // - nếu rỗng -> hiện theo progression (đã unlock)
     public string[] securityDetailsAvailable;
-
-    // Những mục được "giới thiệu" sau khi hoàn thành level -> unlock cho các level sau
     public string[] introduceSecurityDetails;
-
-    // Nếu muốn bắt buộc tick đúng các mục này (sau này)
     public string[] requireSecurityDetails;
 
-    // Meta
     public string target, risk, self;
 
-    // Tutorial compliance
     public bool hasComplianceCheck;
     public string complianceLabel;
     public bool complianceMustBeOn;
 
-    // Puzzle type: "RAIL_SWITCH", "INCIDENT", "RULE_PAGE", ...
     public string puzzleType;
 
-    // JSON-driven answer overrides (optional)
-    // If empty/null -> fallback to current default logic.
-    public string expectedStamp;     // "ACCEPT" or "REJECT"
-    public string expectedOptionId;  // e.g. "SAVE_LEFT"
-    public string flagRule;          // "AUTO" | "ON" | "OFF" | "ANY"
-
-
+    public string expectedStamp;
+    public string expectedOptionId;
+    public string flagRule;
 }

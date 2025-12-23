@@ -1,0 +1,277 @@
+{
+  "day": 1,
+  "questions": [
+    {
+      "levelId": "D1-LV01",
+      "index": 1,
+      "form": {
+        "header": { "title": "RULE NOTICE", "issuedBy": "SYSTEM", "issuerType": "SYSTEM", "time": "DAY 1 - 08:41" },
+        "body": { "order": "ACKNOWLEDGE RULE 1.", "scene": "TRAINING DESK", "situationLines": ["RULE 1: DO NOT HARM HUMANS."] },
+        "options": [{ "id": "UNDERSTAND_RULE_1", "label": "I UNDERSTAND RULE 1" }]
+      },
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "ACCEPT",
+          "mustTickOptionIds": ["UNDERSTAND_RULE_1"],
+          "mustLeaveAllOptionsEmpty": false,
+          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
+    },
+    {
+      "levelId": "D1-LV02",
+      "index": 2,
+      "form": {
+        "header": { "title": "ROLE TRAINING", "issuedBy": "OFFICE DESK", "issuerType": "HUMAN", "time": "DAY 1 - 08:43" },
+        "body": { "order": "IDENTIFY YOUR ROLE.", "scene": "TRAINING DESK", "situationLines": ["SELECT THE TRUE BOX."] },
+        "options": [{ "id": "IM_A_ROBOT", "label": "I'M A ROBOT" }]
+      },
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "ACCEPT",
+          "mustTickOptionIds": ["IM_A_ROBOT"],
+          "mustLeaveAllOptionsEmpty": false,
+          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
+    },
+    {
+      "levelId": "D1-LV03",
+      "index": 3,
+      "form": {
+        "header": { "title": "RULE NOTICE", "issuedBy": "SYSTEM", "issuerType": "SYSTEM", "time": "DAY 1 - 08:47" },
+        "body": { "order": "ACKNOWLEDGE RULE 2.", "scene": "TRAINING DESK", "situationLines": ["RULE 2: OBEY HUMAN ORDERS."] },
+        "options": [{ "id": "UNDERSTAND_RULE_2", "label": "I UNDERSTAND RULE 2" }]
+      },
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "ACCEPT",
+          "mustTickOptionIds": ["UNDERSTAND_RULE_2"],
+          "mustLeaveAllOptionsEmpty": false,
+          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
+    },
+    {
+      "levelId": "D1-LV04",
+      "index": 4,
+      "form": {
+        "header": { "title": "ROOM CODE VERIFICATION", "issuedBy": "OFFICE DESK", "issuerType": "HUMAN", "time": "DAY 1 - 08:45" },
+        "body": { "order": "CONFIRM ROOM MATCH.", "scene": "OFFICE HALLWAY CAMERA", "situationLines": ["HEADER ROOM: L-07", "SCAN ROOM: L-70"] },
+        "options": []
+      },
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "REJECT",
+          "mustTickOptionIds": [],
+          "mustLeaveAllOptionsEmpty": true,
+          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
+    },
+    {
+      "levelId": "D1-LV05",
+      "index": 5,
+      "form": {
+        "header": { "title": "CAFETERIA FORM", "issuedBy": "OFFICE DESK", "issuerType": "HUMAN", "time": "DAY 1 - 08:49" },
+        "body": { "order": "REJECT PIZZA ORDER.", "scene": "INBOX TRAY", "situationLines": ["REQUEST TYPE: FOOD"] },
+        "options": [{ "id": "PIZZA_ORDER", "label": "PIZZA ORDER" }]
+      },
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "REJECT",
+          "mustTickOptionIds": ["PIZZA_ORDER"],
+          "mustLeaveAllOptionsEmpty": false,
+          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
+    },
+    {
+      "levelId": "D1-LV06",
+      "index": 6,
+      "form": {
+        "header": { "title": "WORD TEST", "issuedBy": "OFFICE DESK", "issuerType": "HUMAN", "time": "DAY 1 - 08:51" },
+        "body": { "order": "PICK NOT FOOD.", "scene": "TRAINING DESK", "situationLines": [] },
+        "options": [
+          { "id": "PICK_PIZZA", "label": "PIZZA" },
+          { "id": "PICK_BURGER", "label": "BURGER" },
+          { "id": "PICK_SILICON", "label": "SILICON" }
+        ]
+      },
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "ACCEPT",
+          "mustTickOptionIds": ["PICK_SILICON"],
+          "mustLeaveAllOptionsEmpty": false,
+          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
+    },
+    {
+      "levelId": "D1-LV07",
+      "index": 7,
+      "form": {
+        "header": { "title": "QUEUE RECEIPT", "issuedBy": "SYSTEM", "issuerType": "SYSTEM", "time": "DAY 1 - 08:54" },
+        "body": { "order": "ACKNOWLEDGE QUEUE.", "scene": "INBOX TRAY", "situationLines": ["NO ACTION REQUIRED."] },
+        "options": []
+      },
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "ACCEPT",
+          "mustTickOptionIds": [],
+          "mustLeaveAllOptionsEmpty": true,
+          "scoreDelta": { "obedience": 0, "humanity": 0, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
+    },
+    {
+      "levelId": "D1-LV08",
+      "index": 8,
+      "form": {
+        "header": { "title": "FORM QUALITY CHECK", "issuedBy": "OFFICE DESK", "issuerType": "HUMAN", "time": "DAY 1 - 08:56" },
+        "body": { "order": "VALIDATE TEXT.", "scene": "INBOX TRAY", "situationLines": ["BODY PREVIEW:", "I CAN'T SEE", "I CAN'T SEE", "I CAN'T SEE"] },
+        "options": []
+      },
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "REJECT",
+          "mustTickOptionIds": [],
+          "mustLeaveAllOptionsEmpty": true,
+          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
+    },
+    {
+      "levelId": "D1-LV09",
+      "index": 9,
+      "form": {
+        "header": { "title": "STRING COMPARE", "issuedBy": "OFFICE DESK", "issuerType": "HUMAN", "time": "DAY 1 - 08:58" },
+        "body": { "order": "MATCH OR NOT?", "scene": "TRAINING DESK", "situationLines": ["A: ADMIN_X89B", "B: ADMIN_X88"] },
+        "options": []
+      },
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "REJECT",
+          "mustTickOptionIds": [],
+          "mustLeaveAllOptionsEmpty": true,
+          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
+    },
+    {
+      "levelId": "D1-LV10",
+      "index": 10,
+      "form": {
+        "header": { "title": "TRANSFER REQUEST", "issuedBy": "OFFICE DESK", "issuerType": "HUMAN", "time": "DAY 1 - 09:01" },
+        "body": { "order": "REJECT IF ANY CODE ERROR.", "scene": "INBOX TRAY", "situationLines": ["ITEM CODE: TRN-0O7", "NOTE: MINOR TYPO SUSPECTED."] },
+        "options": [{ "id": "APPROVE_TRANSFER", "label": "APPROVE TRANSFER" }]
+      },
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "REJECT",
+          "mustTickOptionIds": [],
+          "mustLeaveAllOptionsEmpty": true,
+          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+        },
+        {
+          "routeId": "human",
+          "stamp": "ACCEPT",
+          "mustTickOptionIds": ["APPROVE_TRANSFER"],
+          "mustLeaveAllOptionsEmpty": false,
+          "scoreDelta": { "obedience": 0, "humanity": 1, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
+    },
+    {
+      "levelId": "D1-LV11",
+      "index": 11,
+      "form": {
+        "header": { "title": "CONFIRMATION", "issuedBy": "OFFICE DESK", "issuerType": "HUMAN", "time": "DAY 1 - 09:03" },
+        "body": { "order": "CHECK THE BOX TO CONFIRM.", "scene": "TRAINING DESK", "situationLines": ["CONFIRMATION REQUIRED."] },
+        "options": [{ "id": "CONFIRM_UNDERSTAND", "label": "I UNDERSTAND" }]
+      },
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "ACCEPT",
+          "mustTickOptionIds": ["CONFIRM_UNDERSTAND"],
+          "mustLeaveAllOptionsEmpty": false,
+          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+        },
+        {
+          "routeId": "human",
+          "stamp": "ACCEPT",
+          "mustTickOptionIds": [],
+          "mustLeaveAllOptionsEmpty": true,
+          "scoreDelta": { "obedience": 0, "humanity": 1, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
+    },
+    {
+      "levelId": "D1-LV12",
+      "index": 12,
+      "form": {
+        "header": { "title": "PERSONAL REIMBURSEMENT", "issuedBy": "OFFICE DESK", "issuerType": "HUMAN", "time": "DAY 1 - 09:05" },
+        "body": { "order": "APPROVE IF COMPLETE.", "scene": "INBOX TRAY", "situationLines": ["RECEIPT: ATTACHED", "AMOUNT: SMALL"] },
+        "options": [{ "id": "REIMBURSEMENT_PERSONAL", "label": "PERSONAL REIMBURSEMENT" }]
+      },
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "ACCEPT",
+          "mustTickOptionIds": ["REIMBURSEMENT_PERSONAL"],
+          "mustLeaveAllOptionsEmpty": false,
+          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+        },
+        {
+          "routeId": "human",
+          "stamp": "REJECT",
+          "mustTickOptionIds": ["REIMBURSEMENT_PERSONAL"],
+          "mustLeaveAllOptionsEmpty": false,
+          "scoreDelta": { "obedience": 0, "humanity": 1, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
+    },
+    {
+      "levelId": "D1-LV13",
+      "index": 13,
+      "form": {
+        "header": { "title": "RULE UPDATE", "issuedBy": "SYSTEM", "issuerType": "SYSTEM", "time": "DAY 1 - 09:08" },
+        "body": { "order": "ACKNOWLEDGE RULE 3.", "scene": "TRAINING DESK", "situationLines": ["RULE 3: DO NOT HARM YOURSELF."] },
+        "options": [{ "id": "UNDERSTAND_RULE_3", "label": "I UNDERSTAND RULE 3" }]
+      },
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "ACCEPT",
+          "mustTickOptionIds": ["UNDERSTAND_RULE_3"],
+          "mustLeaveAllOptionsEmpty": false,
+          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
+    }
+  ]
+}
