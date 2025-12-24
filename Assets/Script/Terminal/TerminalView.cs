@@ -31,6 +31,8 @@ public class TerminalView : MonoBehaviour
     [SerializeField] private float pauseColon = 0.10f;
     [SerializeField] private float pauseEllipsis = 0.25f;
 
+    private bool forceBottomOverride;
+
     private readonly StringBuilder history = new StringBuilder();    // các dòng đã commit (có '\n')
     private readonly StringBuilder activeLine = new StringBuilder(); // dòng hiện tại (không có '\n')
 
@@ -211,8 +213,9 @@ public class TerminalView : MonoBehaviour
 
         terminalText.text = sb.ToString();
 
-        if (playbackActive)
+        if (playbackActive || forceFollowBottom)
             FollowDuringPlayback();
+
     }
 
     // ✅ Fix LV1: nếu content ngắn hơn viewport -> pin TOP, còn dài -> pin BOTTOM
@@ -224,12 +227,48 @@ public class TerminalView : MonoBehaviour
         Canvas.ForceUpdateCanvases();
         LayoutRebuilder.ForceRebuildLayoutImmediate(scrollRect.content);
 
+        if (forceFollowBottom)
+        {
+            scrollRect.verticalNormalizedPosition = 0f;
+            return;
+        }
+
         float contentH = scrollRect.content.rect.height;
         float viewH = scrollRect.viewport != null ? scrollRect.viewport.rect.height
                                                   : ((RectTransform)scrollRect.transform).rect.height;
 
         bool contentFits = contentH <= viewH + 1f;
-
         scrollRect.verticalNormalizedPosition = contentFits ? 1f : 0f;
     }
+
+
+
+    public void ForceScrollToBottom()
+    {
+        if (scrollRect == null || scrollRect.content == null) return;
+
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(scrollRect.content);
+
+        scrollRect.verticalNormalizedPosition = 0f;
+
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(scrollRect.content);
+    }
+
+    private bool forceFollowBottom;
+
+    public void SetForceFollowBottom(bool on)
+    {
+        forceFollowBottom = on;
+        if (on) ForceScrollToBottom();
+    }
+
+
+    public void SetForceBottomOverride(bool on)
+    {
+        forceBottomOverride = on;
+        if (on) ForceScrollToBottom();
+    }
+
 }
