@@ -739,20 +739,55 @@ MonoBehaviour:
   m_GameObject: {fileID: 277348355}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c16e8b3c58f649545bbb5e725da830e6, type: 3}
+  m_Script: {fileID: 11500000, guid: 111d88fd1cbeaec419f228b87325a9cd, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DisplayGlitchSpawner
-  anomalyId: DISPLAY_GLITCH
-  enableSpawn: 1
-  startDelay: 10
-  checkInterval: 15
-  baseChancePerCheck: 0.05
-  chanceRampPerMinute: 0.02
-  basePos01: {x: 0.5, y: 0.5}
-  posJitter01: {x: 0.25, y: 0.18}
-  startSeverity01: 0.12
-  debugForceSpawnOnStart: 1
-  debugForceKey: 49
+  m_EditorClassIdentifier: Assembly-CSharp::AnomalyDirector
+  techGlitch: {fileID: 607217691}
+  techGlitchConfig: {fileID: 11400000, guid: 416630c6851ecbb46959dfaa2d1aee70, type: 2}
+  displayVariants:
+  - variant: 0
+    intensityMul: 1
+    audioMul: 1
+    startSeverity01: 0.15
+    maxSeverity01: 1
+    severityRampPerMinute: 0.45
+    pulseOnSeconds: {x: 0.1, y: 0.22}
+    pulseOffSeconds: {x: 0.55, y: 1.1}
+    continuousMode: 0
+    playBurstOnPulseStart: 0
+  - variant: 1
+    intensityMul: 0.4
+    audioMul: 0.4
+    startSeverity01: 0.15
+    maxSeverity01: 1
+    severityRampPerMinute: 0.1
+    pulseOnSeconds: {x: 0.1, y: 0.22}
+    pulseOffSeconds: {x: 0.55, y: 1.1}
+    continuousMode: 1
+    playBurstOnPulseStart: 0
+  - variant: 2
+    intensityMul: 2
+    audioMul: 2
+    startSeverity01: 0.15
+    maxSeverity01: 1
+    severityRampPerMinute: 1
+    pulseOnSeconds: {x: 0.1, y: 1}
+    pulseOffSeconds: {x: 0.55, y: 1.1}
+    continuousMode: 0
+    playBurstOnPulseStart: 1
+  enableRandomSpawn: 1
+  spawnStartDelay: 6
+  spawnCheckInterval: 12
+  baseChancePerCheck: 0.06
+  chanceRampPerMinute: 0
+  randomPickVariant: 1
+  randomPosXRange: {x: 0.15, y: 0.85}
+  randomPosYRange: {x: 0.65, y: 0.95}
+  enableAnswerOverrideDebugKey: 1
+  uiBurstIntervalSeconds: {x: 1.5, y: 2}
+  uiBurstDuration: 0.02
+  uiTargetRefreshInterval: 0.5
+  enableDebugHotkeys: 1
 --- !u!1 &380699156
 GameObject:
   m_ObjectHideFlags: 0
@@ -1665,8 +1700,6 @@ GameObject:
   m_Component:
   - component: {fileID: 607217687}
   - component: {fileID: 607217691}
-  - component: {fileID: 607217690}
-  - component: {fileID: 607217692}
   m_Layer: 0
   m_Name: TechGlitchSystem
   m_TagString: Untagged
@@ -1691,23 +1724,6 @@ Transform:
   - {fileID: 539278165}
   m_Father: {fileID: 1408556236}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &607217690
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 607217686}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dbfa05045b5c11b4782ff4c4eff9c789, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AnswerOverrideBurstDriver
-  targetRoot: {fileID: 0}
-  onDuration: {x: 0.12, y: 0.25}
-  offDuration: {x: 1.2, y: 2.8}
-  localPulseDuration: 0.18
-  refreshTargetsOnStart: 1
 --- !u!114 &607217691
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1728,27 +1744,6 @@ MonoBehaviour:
   markerCG: {fileID: 0}
   debug_currentIntensity: 0
   debug_targetIntensity: 0
---- !u!114 &607217692
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 607217686}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3bd5bf5ef4ce1794395dd936d0e12e74, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PersistentDisplayGlitchDriver
-  techGlitch: {fileID: 607217691}
-  anomalyId: DISPLAY_GLITCH
-  defaultPos01: {x: 0.2, y: 0.85}
-  startSeverity: 0
-  maxSeverity: 1
-  severityIncreasePerMinute: 0.06
-  onDuration: {x: 0.1, y: 0.22}
-  offDuration: {x: 0.6, y: 1.4}
-  audioMultiplier: 1
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -3285,7 +3280,6 @@ GameObject:
   - component: {fileID: 1192154172}
   - component: {fileID: 1192154171}
   - component: {fileID: 1192154170}
-  - component: {fileID: 1192154173}
   m_Layer: 5
   m_Name: BodyTMP
   m_TagString: Untagged
@@ -3426,28 +3420,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1192154168}
   m_CullTransparentMesh: 1
---- !u!114 &1192154173
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1192154168}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8a4b3ae097e590e4f9fddf338ac270ea, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UILocalGlitchPulse
-  targetText: {fileID: 1192154171}
-  targetRT: {fileID: 0}
-  maxAlphaDrop: 0.55
-  maxPosJitter: 6
-  maxRotJitter: 2.5
-  tickInterval: 0.02
-  scrambleText: 1
-  scrambleChars: "\u2022\u25B2\u25A1#@$%&"
-  scrambleRatio: 0.25
-  overwritten: 0
 --- !u!1 &1206494719
 GameObject:
   m_ObjectHideFlags: 0
@@ -3885,7 +3857,6 @@ MonoBehaviour:
   hudText: {fileID: 1045671492}
   dialogue: {fileID: 1408556237}
   reportUI: {fileID: 1052511761}
-  answerOverrideBurst: {fileID: 607217690}
   levelsJson: {fileID: 4900000, guid: d85403e25652fae4db1ecf09f9cdd494, type: 3}
   persistProgress: 1
   loopOnEnd: 1

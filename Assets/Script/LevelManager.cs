@@ -23,7 +23,6 @@ public class LevelManager : MonoBehaviour
     [SerializeField] private AnomalyReportUI reportUI;
 
     [Header("AnswerOverride (local UI burst)")]
-    [SerializeField] private AnswerOverrideBurstDriver answerOverrideBurst;
 
     // =========================
     // Levels (JSON)
@@ -252,7 +251,6 @@ public class LevelManager : MonoBehaviour
         // IMPORTANT: level-local anomalies không được persist
         PersistentAnomalyStore.Clear(ANOM_ANSWER_OVERRIDE);
 
-        if (answerOverrideBurst != null) answerOverrideBurst.StopBurst();
         if (form != null) form.ClearAllOverwrittenMarkers();
 
         if (usingQuestionsSchema)
@@ -269,10 +267,7 @@ public class LevelManager : MonoBehaviour
             ApplyOverwriteMarkers(marks);
 
             // start/stop local burst
-            if (PersistentAnomalyStore.IsActive(ANOM_ANSWER_OVERRIDE) && !resolvedThisLevel.Contains(ANOM_ANSWER_OVERRIDE))
-                answerOverrideBurst?.StartBurst();
-            else
-                answerOverrideBurst?.StopBurst();
+            
 
             form.SetLocked(false);
 
@@ -568,7 +563,6 @@ public class LevelManager : MonoBehaviour
 
             if (reportedId.Equals(ANOM_ANSWER_OVERRIDE, StringComparison.OrdinalIgnoreCase))
             {
-                answerOverrideBurst?.StopBurst();
 
                 // Re-render paper "về bình thường"
                 displayQuestion = CloneQuestion(baseQuestion);
@@ -631,7 +625,6 @@ public class LevelManager : MonoBehaviour
 
         if (reportUI != null) reportUI.SetInteractable(false);
 
-        answerOverrideBurst?.StopBurst();
 
         if (hudText != null) hudText.text = "SCRAPPED";
     }

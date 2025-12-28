@@ -107,14 +107,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UILocalGlitchPulse
   targetText: {fileID: 7507461120520503338}
   targetRT: {fileID: 0}
-  maxAlphaDrop: 0.55
+  maxAlphaDrop: 0.45
   maxPosJitter: 6
   maxRotJitter: 2.5
   tickInterval: 0.02
   scrambleText: 1
   scrambleChars: "\u2022\u25B2\u25A1#@$%&"
-  scrambleRatio: 0.6
-  overwritten: 0
+  scrambleRatio: 0.25
+  overwritten: 1
 --- !u!1 &7383715766187387050
 GameObject:
   m_ObjectHideFlags: 0
