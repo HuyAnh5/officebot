@@ -10,18 +10,21 @@ public class TerminalView : MonoBehaviour
     [SerializeField] private TMP_Text terminalText;
     [SerializeField] private ScrollRect scrollRect;
 
-    [Header("Follow / Lock")]
-    [SerializeField] private bool lockScrollInputWhilePlayback = true;
-    [SerializeField] private GameObject scrollInputBlocker; // Image phủ lên ScrollView (Raycast Target = true)
-
-    [Header("Typewriter")]
-    [SerializeField] private float charsPerSecond = 28f;
-
-    [Header("Cursor")]
+    [Header("Cursor (RECOMMENDED: separate TMP so it doesn't affect wrapping)")]
+    [SerializeField] private TMP_Text cursorText;
     [SerializeField] private string cursorChar = "|";
     [SerializeField] private float cursorBlinkInterval = 0.45f;
     [SerializeField] private bool blinkWhileTyping = true;
     [SerializeField] private bool showCursorWhenEmpty = true;
+    [SerializeField] private float cursorXOffset = 2f;
+    [SerializeField] private float cursorYOffset = 0f;
+
+    [Header("Follow / Lock")]
+    [SerializeField] private bool lockScrollInputWhilePlayback = true;
+    [SerializeField] private GameObject scrollInputBlocker;
+
+    [Header("Typewriter")]
+    [SerializeField] private float charsPerSecond = 28f;
 
     [Header("Punctuation Pause (seconds)")]
     [SerializeField] private float pauseComma = 0.06f;
@@ -29,12 +32,21 @@ public class TerminalView : MonoBehaviour
     [SerializeField] private float pauseQuestion = 0.22f;
     [SerializeField] private float pauseExclaim = 0.20f;
     [SerializeField] private float pauseColon = 0.10f;
-    [SerializeField] private float pauseEllipsis = 0.25f;
 
-    private bool forceBottomOverride;
+    // "..." will be shown dot-by-dot using pauseEllipsisDot between each dot.
+    // pauseEllipsis is used AFTER the 3rd dot (also used for unicode '…').
+    [SerializeField] private float pauseEllipsisDot = 1.0f;
+    [SerializeField] private float pauseEllipsis = 0.0f;
 
-    private readonly StringBuilder history = new StringBuilder();    // các dòng đã commit (có '\n')
-    private readonly StringBuilder activeLine = new StringBuilder(); // dòng hiện tại (không có '\n')
+    private readonly StringBuilder history = new StringBuilder();
+
+    // Active line is stored as FULL text (prefix + message). We reveal it using maxVisibleCharacters.
+    private string activeFullLine = string.Empty;
+    private int activeVisibleCount = 0;
+    private int activePrefixLength = 0;
+
+    private string renderedCache = string.Empty;
+    private bool textDirty = true;
 
     private Coroutine blinkCo;
     private Coroutine typeCo;
@@ -42,15 +54,29 @@ public class TerminalView : MonoBehaviour
     private bool playbackActive;
     private bool cursorOn = true;
     private bool isTyping;
+    private bool waitingDuringTyping;
+
+    private bool forceFollowBottom;
 
     public bool IsTyping => isTyping;
-    public string ActiveLineText => activeLine.ToString();
-    public bool HasActiveLine => activeLine.Length > 0;
+
+    // What is currently visible in the active line (prefix + typed so far)
+    public string ActiveLineText
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(activeFullLine)) return string.Empty;
+            int n = Mathf.Clamp(activeVisibleCount, 0, activeFullLine.Length);
+            return activeFullLine.Substring(0, n);
+        }
+    }
+
+    public bool HasActiveLine => !string.IsNullOrEmpty(activeFullLine);
 
     private void OnEnable()
     {
         blinkCo = StartCoroutine(CursorBlinkLoop());
-        Refresh();
+        RefreshAll();
     }
 
     private void OnDisable()
@@ -66,98 +92,189 @@ public class TerminalView : MonoBehaviour
         if (lockScrollInputWhilePlayback && scrollInputBlocker != null)
             scrollInputBlocker.SetActive(active);
 
-        // khi bắt đầu chạy, ép follow để player theo kịp
-        if (active) FollowDuringPlayback();
+        // Không khóa blink theo playback nữa.
+        // Cursor sẽ blink hay không do CursorBlinkLoop quyết định (dựa trên waiting/typing).
+        cursorOn = true;
+        ApplyVisibilityAndCursor();
+    }
+
+
+
+    public void SetForceFollowBottom(bool on)
+    {
+        forceFollowBottom = on;
+        if (on) ForceScrollToBottom();
     }
 
     public void EnsureCursorVisible()
     {
-        Refresh();
+        ApplyVisibilityAndCursor();
     }
 
     public void BeginLine(string prefix)
     {
         StopTypingInternal();
 
-        // commit dòng trước để dòng mới xuống hàng
+        // Commit previous active line as a finished line
         CommitActiveLineToHistory();
 
-        activeLine.Clear();
-        activeLine.Append(prefix);
-        Refresh();
+        activeFullLine = prefix ?? string.Empty;
+        activePrefixLength = activeFullLine.Length;
+        activeVisibleCount = activePrefixLength;
+
+        MarkDirty();
+        RefreshAll();
     }
 
     public void TypeMessage(string message)
     {
         StopTypingInternal();
-        typeCo = StartCoroutine(TypeRoutine(message));
+
+        string prefix = (activePrefixLength > 0 && activeFullLine.Length >= activePrefixLength)
+            ? activeFullLine.Substring(0, activePrefixLength)
+            : string.Empty;
+
+        activeFullLine = prefix + (message ?? string.Empty);
+        activeVisibleCount = Mathf.Clamp(activeVisibleCount, 0, activePrefixLength);
+
+        MarkDirty();
+        RefreshAll();
+
+        typeCo = StartCoroutine(TypeRoutine());
     }
 
     public void ForceCompleteActiveLine(string fullLine)
     {
         StopTypingInternal();
-        activeLine.Clear();
-        activeLine.Append(fullLine);
-        Refresh();
+
+        activeFullLine = fullLine ?? string.Empty;
+        activePrefixLength = 0;
+        activeVisibleCount = activeFullLine.Length;
+
+        MarkDirty();
+        RefreshAll();
     }
 
     public void CommitActiveLineToHistory()
     {
-        if (activeLine.Length == 0) return;
+        if (string.IsNullOrEmpty(activeFullLine)) return;
 
-        history.Append(activeLine);
-        history.Append('\n');
-        activeLine.Clear();
-        Refresh();
+        int n = Mathf.Clamp(activeVisibleCount, 0, activeFullLine.Length);
+        if (n > 0)
+        {
+            history.Append(activeFullLine.Substring(0, n));
+            history.Append('\n');
+        }
+
+        activeFullLine = string.Empty;
+        activeVisibleCount = 0;
+        activePrefixLength = 0;
+
+        MarkDirty();
+        RefreshAll();
     }
 
-    /// <summary>
-    /// Dump nhiều dòng, giữ dòng cuối làm active để cursor nhấp nháy ở cuối.
-    /// </summary>
     public void AppendLinesInstantKeepingLastActive(string[] fullLines)
     {
         StopTypingInternal();
 
         if (fullLines == null || fullLines.Length == 0)
         {
-            Refresh();
+            RefreshAll();
             return;
         }
 
-        // commit dòng đang đứng (nếu có) để dump nằm phía dưới
         CommitActiveLineToHistory();
 
         for (int i = 0; i < fullLines.Length - 1; i++)
         {
-            history.Append(fullLines[i]);
+            history.Append(fullLines[i] ?? string.Empty);
             history.Append('\n');
         }
 
-        activeLine.Clear();
-        activeLine.Append(fullLines[fullLines.Length - 1]);
+        activeFullLine = fullLines[fullLines.Length - 1] ?? string.Empty;
+        activeVisibleCount = activeFullLine.Length;
+        activePrefixLength = 0;
 
-        Refresh();
+        MarkDirty();
+        RefreshAll();
     }
 
-    private IEnumerator TypeRoutine(string message)
+    private IEnumerator TypeRoutine()
     {
         isTyping = true;
+        waitingDuringTyping = false;
 
         float baseDelay = 1f / Mathf.Max(1f, charsPerSecond);
 
-        for (int i = 0; i < message.Length; i++)
+        while (activeVisibleCount < activeFullLine.Length)
         {
-            char c = message[i];
-            activeLine.Append(c);
-            Refresh();
+            int i = activeVisibleCount;
+
+            // Khi chuẩn bị reveal ký tự -> coi là "đang gõ", không blink
+            waitingDuringTyping = false;
+
+            // ASCII ellipsis "..." => dot, WAIT, dot, WAIT, dot, WAIT-after
+            if (IsAsciiEllipsisAt(activeFullLine, i))
+            {
+                // dot 1
+                activeVisibleCount += 1;
+                ApplyVisibilityAndCursor();
+
+                waitingDuringTyping = true; // đang chờ giữa các dấu chấm => blink
+                yield return new WaitForSeconds(pauseEllipsisDot);
+
+                // dot 2
+                waitingDuringTyping = false;
+                activeVisibleCount += 1;
+                ApplyVisibilityAndCursor();
+
+                waitingDuringTyping = true;
+                yield return new WaitForSeconds(pauseEllipsisDot);
+
+                // dot 3
+                waitingDuringTyping = false;
+                activeVisibleCount += 1;
+                ApplyVisibilityAndCursor();
+
+                waitingDuringTyping = true;
+                yield return new WaitForSeconds(pauseEllipsis);
+
+                continue;
+            }
+
+            char c = activeFullLine[i];
+            activeVisibleCount += 1;
+            ApplyVisibilityAndCursor();
 
             float extra = GetPunctuationPause(c);
-            yield return new WaitForSeconds(baseDelay + extra);
+
+            if (extra > 0f)
+            {
+                // pause do dấu câu => coi là WAITING => blink
+                waitingDuringTyping = true;
+                yield return new WaitForSeconds(baseDelay + extra);
+            }
+            else
+            {
+                // khoảng delay gõ bình thường => coi là đang gõ => không blink
+                waitingDuringTyping = false;
+                yield return new WaitForSeconds(baseDelay);
+            }
         }
 
         isTyping = false;
+        waitingDuringTyping = false;
         typeCo = null;
-        Refresh();
+        ApplyVisibilityAndCursor();
+    }
+
+
+    private static bool IsAsciiEllipsisAt(string s, int index)
+    {
+        if (string.IsNullOrEmpty(s)) return false;
+        if (index < 0 || index + 2 >= s.Length) return false;
+        return s[index] == '.' && s[index + 1] == '.' && s[index + 2] == '.';
     }
 
     private float GetPunctuationPause(char c)
@@ -169,7 +286,7 @@ public class TerminalView : MonoBehaviour
             '?' => pauseQuestion,
             '!' => pauseExclaim,
             ':' => pauseColon,
-            '…' => pauseEllipsis,
+            '…' => pauseEllipsis, // unicode ellipsis
             _ => 0f
         };
     }
@@ -178,14 +295,27 @@ public class TerminalView : MonoBehaviour
     {
         while (true)
         {
-            if (!isTyping || blinkWhileTyping)
+            // Blink khi:
+            // - không typing (startDelaySec / gap / idle / hold), hoặc
+            // - đang typing nhưng đang "waiting" vì dấu câu/ellipsis
+            bool shouldBlink = (!isTyping) || waitingDuringTyping;
+
+            if (shouldBlink)
             {
                 cursorOn = !cursorOn;
-                Refresh();
             }
+            else
+            {
+                // Đang reveal ký tự => giữ cursor solid
+                if (!cursorOn) cursorOn = true;
+            }
+
+            ApplyVisibilityAndCursor();
             yield return new WaitForSeconds(cursorBlinkInterval);
         }
     }
+
+
 
     private void StopTypingInternal()
     {
@@ -195,28 +325,124 @@ public class TerminalView : MonoBehaviour
             typeCo = null;
         }
         isTyping = false;
+        waitingDuringTyping = false;
     }
 
-    private void Refresh()
+
+    private void MarkDirty()
     {
-        if (terminalText == null) return;
+        textDirty = true;
+    }
 
-        var sb = new StringBuilder();
-        sb.Append(history);
-
-        bool hasAnyLine = activeLine.Length > 0;
-
-        if (hasAnyLine) sb.Append(activeLine);
-
-        if (hasAnyLine || showCursorWhenEmpty)
-            sb.Append(cursorOn ? cursorChar : " ");
-
-        terminalText.text = sb.ToString();
+    private void RefreshAll()
+    {
+        RebuildTextIfNeeded();
+        ApplyVisibilityAndCursor();
 
         if (playbackActive || forceFollowBottom)
             FollowDuringPlayback();
-
     }
+
+    private void RebuildTextIfNeeded()
+    {
+        if (!textDirty) return;
+        if (terminalText == null) return;
+
+        var sb = new StringBuilder(history.Length + activeFullLine.Length);
+        sb.Append(history);
+        sb.Append(activeFullLine);
+
+        renderedCache = sb.ToString();
+        terminalText.text = renderedCache;
+
+        textDirty = false;
+
+        // Ensure TMP generates geometry for cursor placement
+        terminalText.ForceMeshUpdate();
+    }
+
+    private void ApplyVisibilityAndCursor()
+    {
+        if (terminalText == null) return;
+
+        RebuildTextIfNeeded();
+
+        int fullLen = renderedCache.Length;
+        int visibleTotal = fullLen;
+
+        if (!string.IsNullOrEmpty(activeFullLine))
+        {
+            // history is always fully visible; active line is partially visible
+            visibleTotal = Mathf.Clamp(history.Length + activeVisibleCount, 0, fullLen);
+        }
+
+        terminalText.maxVisibleCharacters = visibleTotal;
+
+        UpdateCursor(visibleTotal);
+
+        if (playbackActive || forceFollowBottom)
+            FollowDuringPlayback();
+    }
+
+    private void UpdateCursor(int visibleTotalChars)
+    {
+        if (cursorText == null)
+        {
+            // Fallback: nếu không có cursorText riêng thì bỏ qua (tránh wrap nhảy)
+            return;
+        }
+
+        bool show = showCursorWhenEmpty || visibleTotalChars > 0;
+        cursorText.gameObject.SetActive(show);
+        if (!show) return;
+
+        cursorText.text = cursorOn ? cursorChar : " ";
+
+        // Đảm bảo cursor luôn nằm trên cùng (không bị che)
+        cursorText.rectTransform.SetAsLastSibling();
+
+        // Update text geometry
+        terminalText.ForceMeshUpdate();
+
+        var ti = terminalText.textInfo;
+        if (ti == null || ti.characterCount == 0)
+        {
+            cursorText.rectTransform.anchoredPosition = Vector2.zero;
+            return;
+        }
+
+        int target = Mathf.Clamp(visibleTotalChars - 1, 0, ti.characterCount - 1);
+
+        // Lùi lại tới ký tự thật sự visible (bỏ qua newline/space)
+        int idx = target;
+        while (idx > 0 && !ti.characterInfo[idx].isVisible)
+            idx--;
+
+        var ch = ti.characterInfo[idx];
+
+        // Dùng xAdvance để đặt con trỏ "sau" ký tự cuối (ổn định hơn bottomRight)
+        Vector3 localInText = new Vector3(ch.xAdvance + cursorXOffset, ch.descender + cursorYOffset, 0f);
+
+        // Convert local-in-terminalText -> screen -> local-in-parent (đúng cả Overlay/Camera canvas)
+        RectTransform parentRT = cursorText.rectTransform.parent as RectTransform;
+        if (parentRT == null)
+            parentRT = cursorText.rectTransform.root as RectTransform;
+
+        Canvas canvas = terminalText.canvas;
+        Camera cam = null;
+        if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            cam = canvas.worldCamera;
+
+        Vector3 world = terminalText.rectTransform.TransformPoint(localInText);
+        Vector2 screen = RectTransformUtility.WorldToScreenPoint(cam, world);
+
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRT, screen, cam, out Vector2 localPoint))
+        {
+            // Lưu ý: CursorTMP nên để anchors ở giữa (0.5,0.5) như ảnh hiện tại để localPoint khớp.
+            cursorText.rectTransform.anchoredPosition = localPoint;
+        }
+    }
+
 
     // ✅ Fix LV1: nếu content ngắn hơn viewport -> pin TOP, còn dài -> pin BOTTOM
     private void FollowDuringPlayback()
@@ -241,8 +467,6 @@ public class TerminalView : MonoBehaviour
         scrollRect.verticalNormalizedPosition = contentFits ? 1f : 0f;
     }
 
-
-
     public void ForceScrollToBottom()
     {
         if (scrollRect == null || scrollRect.content == null) return;
@@ -256,19 +480,9 @@ public class TerminalView : MonoBehaviour
         LayoutRebuilder.ForceRebuildLayoutImmediate(scrollRect.content);
     }
 
-    private bool forceFollowBottom;
-
-    public void SetForceFollowBottom(bool on)
-    {
-        forceFollowBottom = on;
-        if (on) ForceScrollToBottom();
-    }
-
-
+    // giữ API cũ nếu file khác đang gọi
     public void SetForceBottomOverride(bool on)
     {
-        forceBottomOverride = on;
         if (on) ForceScrollToBottom();
     }
-
 }

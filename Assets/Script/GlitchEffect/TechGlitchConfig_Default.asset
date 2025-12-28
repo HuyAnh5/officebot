@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb24355e98ef2644189c200717b6999d, type: 3}
+  m_Name: TechGlitchConfig_Default
+  m_EditorClassIdentifier: Assembly-CSharp::TechGlitchConfig
+  intensityLerpSpeed: 10
+  baseLoopVolume: 0.25
+  baseBurstVolume: 0.35
+  maxStereoPan: 0.85
+  analogScanLineJitterMax: 0.65
+  analogVerticalJumpMax: 0.25
+  analogHorizontalShakeMax: 0.15
+  analogColorDriftMax: 6
+  digitalIntensityMax: 0.55
+  cues:
+  - anomalyId: DISPLAY_GLITCH
+    priority: 100
+    intensity: 0.55
+    screenPos01: {x: 0.2, y: 0.9}
+    audioMultiplier: 1.3
+  - anomalyId: ANSWER_OVERRIDE
+    priority: 50
+    intensity: 0
+    screenPos01: {x: 0.55, y: 0.55}
+    audioMultiplier: 0.7

@@ -226,7 +226,7 @@ public class TerminalDialogueRunner : MonoBehaviour
             displayName = file.presentation.anonymousName;
         }
 
-        return $"[{l.t}] [{displayName}] > ";
+        return $"[{displayName}] > ";
     }
 
     private string BuildIdlePrefix()

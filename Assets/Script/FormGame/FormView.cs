@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using TMPro;
@@ -27,6 +28,11 @@ public class FormView : MonoBehaviour
     [Header("Compliance")]
     public GameObject complianceGroup;
     public CheckboxUI complianceBox;
+
+    [Header("AnswerOverride markers (optional)")]
+    public UILocalGlitchPulse headerGlitch;
+    public UILocalGlitchPulse bodyGlitch;
+
 
     private readonly List<CheckboxUI> spawnedOptions = new List<CheckboxUI>();
     private readonly List<CheckboxUI> spawnedSecurityDetails = new List<CheckboxUI>();
@@ -285,6 +291,7 @@ public class FormView : MonoBehaviour
             LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer.GetComponent<RectTransform>());
     }
 
+
     private string BuildBody(LevelData level, string displayedOrder)
     {
         var sb = new StringBuilder();
@@ -450,4 +457,90 @@ public class FormView : MonoBehaviour
             if (spawnedSecurityDetails[i].IsOn) set.Add(spawnedSecurityDetails[i].Id);
         return set;
     }
+
+    public void SetOptionLabel(string optionId, string newLabel)
+    {
+        if (string.IsNullOrEmpty(optionId)) return;
+        for (int i = 0; i < spawnedOptions.Count; i++)
+        {
+            var row = spawnedOptions[i];
+            if (row == null) continue;
+            if (row.Id == optionId)
+            {
+                row.SetLabel(newLabel);
+                return;
+            }
+        }
+    }
+
+    public void SetOptionLabels(Dictionary<string, string> labelsById)
+    {
+        if (labelsById == null) return;
+        for (int i = 0; i < spawnedOptions.Count; i++)
+        {
+            var row = spawnedOptions[i];
+            if (row == null) continue;
+            if (labelsById.TryGetValue(row.Id, out var label))
+                row.SetLabel(label);
+        }
+    }
+
+
+    public void ClearAllOverwrittenMarkers()
+    {
+        MarkHeaderOverwritten(false);
+        MarkBodyOverwritten(false);
+
+        for (int i = 0; i < spawnedOptions.Count; i++)
+        {
+            var row = spawnedOptions[i];
+            if (row == null) continue;
+
+            var pulse = row.GetComponentInChildren<UILocalGlitchPulse>(true);
+            if (pulse != null) pulse.SetOverwritten(false);
+        }
+    }
+
+    public void MarkHeaderOverwritten(bool on)
+    {
+        if (headerGlitch != null)
+        {
+            headerGlitch.SetOverwritten(on);
+            return;
+        }
+
+        var pulse = headerText != null ? headerText.GetComponentInChildren<UILocalGlitchPulse>(true) : null;
+        if (pulse != null) pulse.SetOverwritten(on);
+    }
+
+    public void MarkBodyOverwritten(bool on)
+    {
+        if (bodyGlitch != null)
+        {
+            bodyGlitch.SetOverwritten(on);
+            return;
+        }
+
+        var pulse = bodyText != null ? bodyText.GetComponentInChildren<UILocalGlitchPulse>(true) : null;
+        if (pulse != null) pulse.SetOverwritten(on);
+    }
+
+    public void MarkOptionOverwritten(string optionId, bool on)
+    {
+        if (string.IsNullOrEmpty(optionId)) return;
+
+        for (int i = 0; i < spawnedOptions.Count; i++)
+        {
+            var row = spawnedOptions[i];
+            if (row == null) continue;
+            if (!string.Equals(row.Id, optionId, StringComparison.OrdinalIgnoreCase)) continue;
+
+            var pulse = row.GetComponentInChildren<UILocalGlitchPulse>(true);
+            if (pulse != null) pulse.SetOverwritten(on);
+            return;
+        }
+    }
+
+
+
 }

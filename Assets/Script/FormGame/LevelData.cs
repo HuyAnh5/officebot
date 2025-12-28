@@ -6,7 +6,6 @@ public class LevelList { public LevelData[] levels; }
 
 // ==============================
 // New schema: DayQuestionsFile
-// { "day": 1, "questions": [ { "levelId", "index", "form":{ "header","body","options" }, "routes":[...], "onWrong":{...} } ] }
 // ==============================
 
 [Serializable]
@@ -24,6 +23,39 @@ public class QuestionData
     public QuestionForm form;
     public AnswerRouteData[] routes;
     public WrongScore onWrong;
+
+    // NEW: anomalies phải khai báo trong data (đổi title/order/options...)
+    public ScriptedAnomaly[] scriptedAnomalies;
+}
+
+[Serializable]
+public class ScriptedAnomaly
+{
+    public string id; // "ANSWER_OVERRIDE" / "FORM_ERROR" / ...
+
+    // Header overrides
+    public string overrideTitle;
+    public string overrideIssuedBy;
+    public string overrideTime;
+
+    // Body overrides
+    public string overrideOrder;
+    public string overrideScene;
+    public string[] overrideSituationLines;
+
+    // Options overrides
+    public OptionLabelOverride[] optionLabelOverrides;
+
+    // Quick swap 2 option labels (giữ nguyên id, chỉ đổi label)
+    public string optionA;
+    public string optionB;
+}
+
+[Serializable]
+public class OptionLabelOverride
+{
+    public string id;
+    public string label;
 }
 
 [Serializable]
@@ -85,7 +117,7 @@ public class OptionData
 }
 
 // ==============================
-// Legacy schema types (giữ để chạy Level.json cũ nếu cần)
+// Legacy schema (giữ để chạy Level.json cũ)
 // ==============================
 
 [Serializable]

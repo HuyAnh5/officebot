@@ -6,9 +6,15 @@ using TMPro;
 public class AnomalyReportUI : MonoBehaviour
 {
     [Header("Refs")]
-    [SerializeField] private Transform checkboxList;      // CheckboxList
+    [SerializeField] private Transform checkboxList;      // Parent chứa các checkbox spawn
     [SerializeField] private CheckboxUI checkboxPrefab;   // prefab CheckboxUI
     [SerializeField] private Button reportButton;         // ReportButton
+
+    [Header("Status TMP (loading/result)")]
+    [SerializeField] private TMP_Text statusText;         // StatusTMP (có thể đặt ở bất kỳ đâu)
+
+    [Header("Hook")]
+    [SerializeField] private LevelManager levelManager;
 
     [Header("Layout (spawned rows)")]
     [SerializeField] private float checkboxPreferredHeight = 44f;
@@ -22,18 +28,24 @@ public class AnomalyReportUI : MonoBehaviour
 
     private readonly (string id, string label)[] items =
     {
-        ("FORM_ERROR",      "FORM ERROR (PAPER)"),
-        ("DISPLAY_GLITCH",  "DISPLAY GLITCH (VISUAL / PERCEPTION)"),
-        ("ANSWER_OVERRIDE", "ANSWER OVERRIDE (UI / GAMEPLAY)"),
-        ("TERMINAL_ANOMALY","TERMINAL ANOMALY (CHAT / COMMAND)")
+        ("FORM_ERROR",      "FORM ERROR"),
+        ("DISPLAY_GLITCH",  "DISPLAY GLITCH"),
+        ("ANSWER_OVERRIDE", "ANSWER OVERRIDE"),
+        ("TERMINAL_ANOMALY","TERMINAL ANOMALY")
     };
+
+    private RectTransform _layoutRoot;
 
     private void Awake()
     {
+        _layoutRoot = GetComponent<RectTransform>();
+
         Build();
 
         if (reportButton != null)
             reportButton.onClick.AddListener(OnReportClicked);
+
+        ResetUIForNewLevel();
     }
 
     public void Build()
@@ -59,17 +71,25 @@ public class AnomalyReportUI : MonoBehaviour
             le.preferredHeight = checkboxPreferredHeight;
             if (checkboxPreferredWidth > 0f) le.preferredWidth = checkboxPreferredWidth;
 
-            // Override font size (chỉ trong report panel)
             ApplyLabelStyle(inst.transform);
 
             inst.OnChanged += OnCheckboxChanged;
             spawned.Add(inst);
         }
+
+        // Status TMP: đảm bảo có kích thước layout (để khỏi bị "cao = 0")
+        if (statusText != null)
+        {
+            var le = statusText.GetComponent<LayoutElement>();
+            if (le == null) le = statusText.gameObject.AddComponent<LayoutElement>();
+            le.preferredHeight = 44f;
+        }
+
+        RebuildLayout();
     }
 
     private void ApplyLabelStyle(Transform root)
     {
-        // Ưu tiên TMP label có tên chứa "label" hoặc "text"
         TMP_Text best = null;
         var texts = root.GetComponentsInChildren<TMP_Text>(true);
         foreach (var t in texts)
@@ -94,10 +114,8 @@ public class AnomalyReportUI : MonoBehaviour
 
         // chỉ cho tick 1 cái
         for (int i = 0; i < spawned.Count; i++)
-        {
             if (spawned[i] != who)
                 spawned[i].SetOn(false, notify: false);
-        }
     }
 
     public string GetSelectedId()
@@ -107,12 +125,77 @@ public class AnomalyReportUI : MonoBehaviour
         return "";
     }
 
+    // ====== UI STATES ======
+
+    public void ResetUIForNewLevel()
+    {
+        // show controls
+        SetCheckboxesVisible(true);
+        if (reportButton) reportButton.gameObject.SetActive(true);
+
+        // hide status
+        if (statusText) statusText.gameObject.SetActive(false);
+
+        // clear selection
+        for (int i = 0; i < spawned.Count; i++)
+            spawned[i].SetOn(false, notify: false);
+
+        SetInteractable(true);
+        RebuildLayout();
+    }
+
+    public void ShowFixingText(string msg)
+    {
+        // hide controls (KHÔNG tắt checkboxList để tránh ẩn luôn status nếu status nằm trong list)
+        SetCheckboxesVisible(false);
+        if (reportButton) reportButton.gameObject.SetActive(false);
+
+        if (statusText)
+        {
+            statusText.gameObject.SetActive(true);
+            statusText.text = msg;
+        }
+
+        RebuildLayout();
+    }
+
+    public void ShowResultText(string msg)
+    {
+        if (statusText)
+        {
+            statusText.gameObject.SetActive(true);
+            statusText.text = msg;
+        }
+        RebuildLayout();
+    }
+
+    private void SetCheckboxesVisible(bool on)
+    {
+        for (int i = 0; i < spawned.Count; i++)
+            if (spawned[i] != null)
+                spawned[i].gameObject.SetActive(on);
+    }
+
+    public void SetInteractable(bool on)
+    {
+        if (reportButton) reportButton.interactable = on;
+        for (int i = 0; i < spawned.Count; i++)
+            if (spawned[i] != null)
+                spawned[i].SetLocked(!on);
+    }
+
+    private void RebuildLayout()
+    {
+        Canvas.ForceUpdateCanvases();
+        if (_layoutRoot != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_layoutRoot);
+    }
+
+    // ====== Events ======
     private void OnReportClicked()
     {
         string selected = GetSelectedId();
-        Debug.Log($"[ANOMALY REPORT] selected={selected}");
-
-        // TODO: gọi sang LevelManager của bạn
-        // levelManager.ReportAnomaly(selected);
+        if (levelManager != null)
+            levelManager.TryReport(selected);
     }
 }
