@@ -35,15 +35,21 @@
 
   "segments": [
     {
-      "levelId": "D1-LV01",
-      "startDelaySec": { "min": 0.0, "max": 0.0 },
-      "lines": [
-        { "t": "08:41:03", "speaker": "maya",  "text": "Ê… con máy này mới được đưa vào à?" },
-        { "t": "08:41:09", "speaker": "derek", "text": "Ừ, nó là UNIT 734. Nó sẽ giúp việc của chúng ta trong tương lai dễ dàng hơn." },
-        { "t": "08:41:16", "speaker": "john",  "text": "“Tương lai” nghe xa quá." },
-        { "t": "08:41:21", "speaker": "lin",   "text": ". . ." }
-      ]
-    },
+  "levelId": "D1-LV01",
+  "startDelaySec": { "min": 0.0, "max": 0.0 },
+  "lines": [
+    { "t": "08:41:03", "speaker": "maya",  "text": "Ê… con máy này mới được đưa vào à?" },
+    { "t": "08:41:09", "speaker": "derek", "text": "Ừ, nó là UNIT 734. Nó sẽ giúp việc của chúng ta trong tương lai dễ dàng hơn." },
+    { "t": "08:41:16", "speaker": "john",  "text": "“Tương lai” nghe xa quá." },
+    { "t": "08:41:21", "speaker": "lin",   "text": ". . ." }
+  ],
+  "terminalOrder": {
+    "text": "□ ORDER: TICK RULE 7. ACCEPT.",
+    "showAfterLineIndex": 0,
+    "autoHideAfterSec": 10
+  }
+}
+,
     {
       "levelId": "D1-LV02",
       "startDelaySec": { "min": 3, "max": 4 },

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -18,9 +18,9 @@ public class AnomalyDirector : MonoBehaviour
 
     public enum DisplayVariant
     {
-        PulseGap = 0,       // c� kho?ng tr?ng
-        ContinuousSoft = 1, // nh?, g?n nh? li�n t?c
-        SurgeBurst = 2      // b�ng ph�t m?nh
+        PulseGap = 0,
+        ContinuousSoft = 1,
+        SurgeBurst = 2
     }
 
     [Serializable]
@@ -35,15 +35,15 @@ public class AnomalyDirector : MonoBehaviour
         [Header("Severity")]
         [Range(0f, 1f)] public float startSeverity01 = 0.15f;
         [Range(0f, 1f)] public float maxSeverity01 = 1.0f;
-        [Tooltip("severity t?ng theo ph�t khi ?ang active")]
+        [Tooltip("severity t?ng theo phút khi ?ang active")]
         [Min(0f)] public float severityRampPerMinute = 0.45f;
 
-        [Header("Pulse (sec) - d�ng cho PulseGap / SurgeBurst")]
+        [Header("Pulse (sec) - dùng cho PulseGap / SurgeBurst")]
         public Vector2 pulseOnSeconds = new Vector2(0.10f, 0.22f);
         public Vector2 pulseOffSeconds = new Vector2(0.55f, 1.10f);
 
-        [Header("Continuous (sec) - d�ng cho ContinuousSoft")]
-        [Tooltip("ContinuousSoft v?n c� th? �nh?p nh?�, set off r?t nh?")]
+        [Header("Continuous (sec) - dùng cho ContinuousSoft")]
+        [Tooltip("ContinuousSoft v?n có th? “nh?p nh?”, set off r?t nh?")]
         public bool continuousMode = false;
 
         [Header("SFX")]
@@ -63,7 +63,7 @@ public class AnomalyDirector : MonoBehaviour
     [SerializeField] private float spawnCheckInterval = 12f;
     [Range(0f, 1f)] public float baseChancePerCheck = 0.06f;
     [Min(0f)] public float chanceRampPerMinute = 0.00f;
-    [Tooltip("Random spawn ch?n variant ng?u nhi�n (n?u false s? d�ng PulseGap).")]
+    [Tooltip("Random spawn ch?n variant ng?u nhiên (n?u false s? dùng PulseGap).")]
     [SerializeField] private bool randomPickVariant = true;
 
     [Header("Spawn Position (pos01)")]
@@ -78,6 +78,8 @@ public class AnomalyDirector : MonoBehaviour
 
     [Header("Debug Hotkeys")]
     [SerializeField] private bool enableDebugHotkeys = true; // 1-2-3 display variants, 4 answer override pulse
+
+    private bool _wasDisplayActive;
 
     // runtime
     private float elapsed;
@@ -97,7 +99,7 @@ public class AnomalyDirector : MonoBehaviour
         elapsed = 0f;
         nextSpawnCheck = spawnCheckInterval;
 
-        // ??m b?o kh�ng �v�o l� max�
+        // ??m b?o không “vào là max”
         if (techGlitch != null)
             techGlitch.ClearCue();
     }
@@ -107,15 +109,35 @@ public class AnomalyDirector : MonoBehaviour
         float dt = Time.unscaledDeltaTime;
         elapsed += dt;
 
+        // Debug + random spawn phải chạy kể cả khi DISPLAY_GLITCH đang inactive
         if (enableDebugHotkeys)
             HandleDebugHotkeys();
 
         if (enableRandomSpawn)
             TickRandomSpawn(dt);
 
-        TickDisplayGlitch(dt);
+        // Sau khi debug/spawn có thể đã thay đổi state, đọc lại active
+        bool active = PersistentAnomalyStore.IsActive("DISPLAY_GLITCH");
+
+        // nếu vừa bị clear (report đúng), phải tắt cue ngay
+        if (!active && _wasDisplayActive)
+        {
+            techGlitch.ClearCue();
+            displayPhaseOn = true;
+            displayPhaseTimer = 0f;
+            displayJustTurnedOn = false;
+        }
+
+        _wasDisplayActive = active;
+
+        // Chỉ driver DISPLAY_GLITCH phụ thuộc active
+        if (active)
+            TickDisplayGlitch(dt);
+
+        // AnswerOverride phải chạy độc lập (nó tự check store "ANSWER_OVERRIDE")
         TickAnswerOverride(dt);
     }
+
 
     // =========================
     // DEBUG HOTKEYS (Input System)
@@ -126,18 +148,26 @@ public class AnomalyDirector : MonoBehaviour
         var kb = Keyboard.current;
         if (kb == null) return;
 
-        if (WasDigitPressed(kb, 1)) ForceDisplayVariant(DisplayVariant.PulseGap);
-        if (WasDigitPressed(kb, 2)) ForceDisplayVariant(DisplayVariant.ContinuousSoft);
-        if (WasDigitPressed(kb, 3)) ForceDisplayVariant(DisplayVariant.SurgeBurst);
-
-        if (enableAnswerOverrideDebugKey && WasDigitPressed(kb, 4))
+        // 1..N map theo số phần tử của displayVariants
+        int n = (displayVariants != null) ? Mathf.Min(displayVariants.Length, 9) : 0;
+        for (int i = 0; i < n; i++)
         {
-            // Debug only: pulse 1 l?n c�c targets ?ang overwritten (kh�ng overwrite l?i text)
+            int digit = i + 1; // element 0 -> key 1, element 1 -> key 2, ...
+            if (WasDigitPressed(kb, digit))
+            {
+                // Force đúng variant theo element i (không hardcode 3 nút nữa)
+                ForceDisplayVariant(displayVariants[i].variant);
+            }
+        }
+
+        if (enableAnswerOverrideDebugKey && kb[Key.O].wasPressedThisFrame)
+        {
             RefreshOverwrittenTargets();
             PulseOverwrittenOnce();
         }
 #endif
     }
+
 
 #if ENABLE_INPUT_SYSTEM
     private static bool WasDigitPressed(Keyboard kb, int digit)
@@ -180,7 +210,7 @@ public class AnomalyDirector : MonoBehaviour
         PlayerPrefs.SetInt(PREF_DISPLAY_VARIANT, vi);
         PlayerPrefs.Save();
 
-        // toggle: n?u ?ang active v� ?�ng variant -> clear, ng??c l?i -> force spawn
+        // toggle: n?u ?ang active và ?úng variant -> clear, ng??c l?i -> force spawn
         if (PersistentAnomalyStore.IsActive(ID_DISPLAY))
         {
             PersistentAnomalyStore.Clear(ID_DISPLAY);
@@ -246,7 +276,7 @@ public class AnomalyDirector : MonoBehaviour
 
         if (!PersistentAnomalyStore.IsActive(ID_DISPLAY))
         {
-            // kh�ng spam ClearCue m?i frame; techGlitch t? gi? 0 n?u ?� clear
+            // không spam ClearCue m?i frame; techGlitch t? gi? 0 n?u ?ã clear
             return;
         }
 

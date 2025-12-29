@@ -639,11 +639,16 @@ public class LevelManager : MonoBehaviour
 
         busy = true;
 
-        if (dialogue != null) dialogue.DumpRemainingNow();
-        SetStampButtonsInteractable(false);
+        if (dialogue != null)
+        {
+            dialogue.DumpRemainingNow();
+            dialogue.HidePinnedNowAnimated(); // ✅ bắt đầu hide anim ngay khi commit
+        }
 
+        SetStampButtonsInteractable(false);
         StartCoroutine(CommitRoutine(accept));
     }
+
 
     private IEnumerator CommitRoutine(bool accept)
     {

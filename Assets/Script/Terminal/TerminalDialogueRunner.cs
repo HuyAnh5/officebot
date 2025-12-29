@@ -26,6 +26,8 @@ public class TerminalDialogueRunner : MonoBehaviour
     private string currentPrefix = "";
     private string currentText = "";
 
+    bool orderShown = false;
+
     private void Awake()
     {
         if (dialogueJson != null && !string.IsNullOrEmpty(dialogueJson.text))
@@ -37,6 +39,9 @@ public class TerminalDialogueRunner : MonoBehaviour
         if (terminal == null || file == null || file.segments == null) return;
 
         StopAllCoroutinesSafe();
+        terminal.HidePinnedOrderImmediate();
+
+        orderShown = false; // ✅ reset mỗi level
 
         currentSegment = FindSegment(levelId);
         currentLineIndex = -1;
@@ -50,7 +55,11 @@ public class TerminalDialogueRunner : MonoBehaviour
         }
 
         playCo = StartCoroutine(PlaySegmentRoutine(currentSegment));
+
+        // ❌ bỏ dòng này (API cũ, không liên quan pinned mới)
+        // terminal.HidePinnedOrder();
     }
+
 
     public void DumpRemainingNow()
     {
@@ -110,13 +119,26 @@ public class TerminalDialogueRunner : MonoBehaviour
             // giữ ở cuối câu (cursor nhấp nháy ở đây)
             yield return new WaitForSeconds(UnityEngine.Random.Range(postLineHoldMin, postLineHoldMax));
 
+            if (!orderShown && seg.terminalOrder != null && seg.terminalOrder.showAfterLineIndex >= 0 && i == seg.terminalOrder.showAfterLineIndex)
+            {
+                terminal.ShowPinnedOrder(seg.terminalOrder.text, seg.terminalOrder.autoHideAfterSec);
+                orderShown = true;
+            }
             // chờ giữa 2 câu, vẫn đứng ở cuối câu hiện tại (không tạo prefix mới)
             if (i < seg.lines.Length - 1)
                 yield return new WaitForSeconds(UnityEngine.Random.Range(interLineGapMin, interLineGapMax));
         }
 
+
+
         // Segment kết thúc: giữ cursor ở cuối câu cuối (không commit thêm, không tạo prefix mới)
         terminal.SetPlaybackActive(false);
+
+        if (!orderShown && seg.terminalOrder != null && seg.terminalOrder.showAfterLineIndex < 0)
+        {
+            terminal.ShowPinnedOrder(seg.terminalOrder.text, seg.terminalOrder.autoHideAfterSec);
+            orderShown = true;
+        }
 
         // ✅ start idle nag sau khi segment xong, nếu JSON có idleNag
         if (file.idleNag != null && file.idleNag.pool != null && file.idleNag.pool.Length > 0)
@@ -125,6 +147,7 @@ public class TerminalDialogueRunner : MonoBehaviour
         }
 
         playCo = null;
+
     }
 
     private IEnumerator IdleNagLoop()
@@ -243,6 +266,28 @@ public class TerminalDialogueRunner : MonoBehaviour
         return $"[--:--:--] [{displayName}] > ";
     }
 
+    public void HidePinnedNowAnimated()
+    {
+        if (terminal == null) return;
+        if (!terminal.IsPinnedVisible) return;
+        terminal.HidePinnedOrderAnimated();
+    }
+
+    public IEnumerator HidePinnedBeforeLevelChange()
+    {
+        if (terminal == null) yield break;
+
+        if (!terminal.IsPinnedVisible)
+        {
+            terminal.HidePinnedOrderImmediate();
+            yield break;
+        }
+
+        terminal.HidePinnedOrderAnimated();
+        yield return new WaitForSecondsRealtime(terminal.PinnedHideDuration);
+    }
+
+
     // ===== JSON classes (JsonUtility-friendly) =====
     [Serializable]
     private class DialogueFile
@@ -266,7 +311,22 @@ public class TerminalDialogueRunner : MonoBehaviour
         public string levelId;
         public RangeSec startDelaySec;
         public Line[] lines;
+
+        public TerminalOrder terminalOrder; // NEW
     }
+
+    [Serializable]
+    private class TerminalOrder
+    {
+        public string text;
+
+        // Hiện sau khi chạy xong line index này (0-based). -1 = sau câu cuối (default)
+        public int showAfterLineIndex = -1;
+
+        // timeout overlay (giây). <=0 thì dùng mặc định trong TerminalView
+        public float autoHideAfterSec = -1f;
+    }
+
 
     [Serializable]
     private class Line

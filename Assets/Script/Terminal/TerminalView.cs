@@ -3,6 +3,8 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
+
 
 public class TerminalView : MonoBehaviour
 {
@@ -37,6 +39,34 @@ public class TerminalView : MonoBehaviour
     // pauseEllipsis is used AFTER the 3rd dot (also used for unicode '…').
     [SerializeField] private float pauseEllipsisDot = 1.0f;
     [SerializeField] private float pauseEllipsis = 0.0f;
+
+    [Header("Pinned Terminal Order (overlay)")]
+    [SerializeField] private RectTransform pinnedRoot;     // panel trắng overlay
+    [SerializeField] private TMP_Text pinnedText;          // TMP trong panel
+    [SerializeField] private RectTransform pinnedBorder;   // Image viền trắng (RectTransform)
+
+    [Header("Pinned Anim")]
+    [SerializeField] private float pinnedSlideOffsetY = 60f;
+    [SerializeField] private float pinnedShowDur = 0.25f;
+    [SerializeField] private float pinnedHideDur = 0.20f;
+
+    [Header("Pinned Timing")]
+    [SerializeField] private float pinnedAutoHideDefaultSec = 10f; // chỉnh được
+    [SerializeField] private float pinnedCharsPerSecond = 28f;     // giống terminal
+
+
+    private Vector2 pinnedShownPos;
+    private bool pinnedPosCached;
+    private Sequence pinnedSeq;
+    private Tween pinnedBorderTween;
+    private Tween pinnedAutoHideTween;
+    private Coroutine pinnedTypeCo;
+
+    public float PinnedHideDuration => pinnedHideDur;
+    public bool IsPinnedVisible => pinnedRoot != null && pinnedRoot.gameObject.activeSelf;
+
+
+
 
     private readonly StringBuilder history = new StringBuilder();
 
@@ -77,6 +107,7 @@ public class TerminalView : MonoBehaviour
     {
         blinkCo = StartCoroutine(CursorBlinkLoop());
         RefreshAll();
+        HidePinnedOrderImmediate();
     }
 
     private void OnDisable()
@@ -98,7 +129,129 @@ public class TerminalView : MonoBehaviour
         ApplyVisibilityAndCursor();
     }
 
+    private void CachePinnedPos()
+    {
+        if (pinnedPosCached) return;
+        if (pinnedRoot == null) return;
+        pinnedShownPos = pinnedRoot.anchoredPosition;
+        pinnedPosCached = true;
+    }
 
+    private void KillPinned()
+    {
+        pinnedSeq?.Kill();
+        pinnedBorderTween?.Kill();
+        pinnedAutoHideTween?.Kill();
+        pinnedSeq = null;
+        pinnedBorderTween = null;
+        pinnedAutoHideTween = null;
+
+        if (pinnedTypeCo != null)
+        {
+            StopCoroutine(pinnedTypeCo);
+            pinnedTypeCo = null;
+        }
+    }
+
+    public void HidePinnedOrderImmediate()
+    {
+        CachePinnedPos();
+        KillPinned();
+
+        if (pinnedText != null)
+        {
+            pinnedText.text = "";
+            pinnedText.maxVisibleCharacters = int.MaxValue;
+        }
+
+        if (pinnedRoot != null)
+            pinnedRoot.gameObject.SetActive(false);
+    }
+
+
+    public void ShowPinnedOrder(string text, float autoHideSec = -1f)
+    {
+        CachePinnedPos();
+        if (pinnedRoot == null || pinnedText == null) return;
+
+        KillPinned();
+        pinnedRoot.gameObject.SetActive(true);
+
+        float offY = GetPinnedOffY();
+        pinnedRoot.anchoredPosition = pinnedShownPos + new Vector2(0f, offY);
+
+        pinnedText.text = text ?? "";
+        pinnedText.maxVisibleCharacters = 0;
+
+        if (pinnedBorder != null)
+            pinnedBorder.localScale = Vector3.one;
+
+        float hold = (autoHideSec > 0f) ? autoHideSec : pinnedAutoHideDefaultSec;
+
+        pinnedSeq = DOTween.Sequence().SetUpdate(true);
+        pinnedSeq.Append(pinnedRoot.DOAnchorPos(pinnedShownPos, pinnedShowDur).SetEase(Ease.OutCubic));
+        pinnedSeq.AppendCallback(() =>
+        {
+            pinnedTypeCo = StartCoroutine(PinnedTypeRoutine());
+
+            if (pinnedBorder != null)
+                pinnedBorderTween = pinnedBorder.DOScaleX(0f, hold).SetEase(Ease.Linear).SetUpdate(true);
+
+            pinnedAutoHideTween = DOVirtual.DelayedCall(hold, HidePinnedOrderAnimated, ignoreTimeScale: true);
+        });
+    }
+
+
+    public void HidePinnedOrderAnimated()
+    {
+        CachePinnedPos();
+        if (pinnedRoot == null) return;
+        if (!pinnedRoot.gameObject.activeSelf) return; // đã tắt rồi thì thôi
+
+        KillPinned();
+
+        float offY = GetPinnedOffY();
+        Vector2 hiddenPos = pinnedShownPos + new Vector2(0f, offY);
+
+        pinnedSeq = DOTween.Sequence().SetUpdate(true);
+        pinnedSeq.Append(pinnedRoot.DOAnchorPos(hiddenPos, pinnedHideDur).SetEase(Ease.InCubic));
+        pinnedSeq.OnComplete(() =>
+        {
+            if (pinnedText != null)
+            {
+                pinnedText.text = "";
+                pinnedText.maxVisibleCharacters = int.MaxValue;
+            }
+            pinnedRoot.gameObject.SetActive(false);
+        });
+    }
+
+
+    private IEnumerator PinnedTypeRoutine()
+    {
+        if (pinnedText == null) yield break;
+
+        // cập nhật mesh để biết characterCount
+        pinnedText.ForceMeshUpdate();
+
+        int total = pinnedText.textInfo.characterCount;
+        if (total <= 0)
+        {
+            pinnedText.maxVisibleCharacters = int.MaxValue;
+            yield break;
+        }
+
+        float cps = Mathf.Max(1f, pinnedCharsPerSecond > 0 ? pinnedCharsPerSecond : charsPerSecond);
+        float delay = 1f / cps;
+
+        int visible = 0;
+        while (visible < total)
+        {
+            visible++;
+            pinnedText.maxVisibleCharacters = visible;
+            yield return new WaitForSecondsRealtime(delay);
+        }
+    }
 
     public void SetForceFollowBottom(bool on)
     {
@@ -215,33 +368,33 @@ public class TerminalView : MonoBehaviour
             waitingDuringTyping = false;
 
             // ASCII ellipsis "..." => dot, WAIT, dot, WAIT, dot, WAIT-after
-            if (IsAsciiEllipsisAt(activeFullLine, i))
-            {
-                // dot 1
-                activeVisibleCount += 1;
-                ApplyVisibilityAndCursor();
+            //if (IsAsciiEllipsisAt(activeFullLine, i))
+            //{
+            //    // dot 1
+            //    activeVisibleCount += 1;
+            //    ApplyVisibilityAndCursor();
 
-                waitingDuringTyping = true; // đang chờ giữa các dấu chấm => blink
-                yield return new WaitForSeconds(pauseEllipsisDot);
+            //    waitingDuringTyping = true; // đang chờ giữa các dấu chấm => blink
+            //    yield return new WaitForSeconds(pauseEllipsisDot);
 
-                // dot 2
-                waitingDuringTyping = false;
-                activeVisibleCount += 1;
-                ApplyVisibilityAndCursor();
+            //    // dot 2
+            //    waitingDuringTyping = false;
+            //    activeVisibleCount += 1;
+            //    ApplyVisibilityAndCursor();
 
-                waitingDuringTyping = true;
-                yield return new WaitForSeconds(pauseEllipsisDot);
+            //    waitingDuringTyping = true;
+            //    yield return new WaitForSeconds(pauseEllipsisDot);
 
-                // dot 3
-                waitingDuringTyping = false;
-                activeVisibleCount += 1;
-                ApplyVisibilityAndCursor();
+            //    // dot 3
+            //    waitingDuringTyping = false;
+            //    activeVisibleCount += 1;
+            //    ApplyVisibilityAndCursor();
 
-                waitingDuringTyping = true;
-                yield return new WaitForSeconds(pauseEllipsis);
+            //    waitingDuringTyping = true;
+            //    yield return new WaitForSeconds(pauseEllipsis);
 
-                continue;
-            }
+            //    continue;
+            //}
 
             char c = activeFullLine[i];
             activeVisibleCount += 1;
@@ -485,4 +638,12 @@ public class TerminalView : MonoBehaviour
     {
         if (on) ForceScrollToBottom();
     }
+
+    private float GetPinnedOffY()
+    {
+        if (pinnedRoot == null) return pinnedSlideOffsetY;
+        // đảm bảo trượt ra khỏi màn: ít nhất = chiều cao panel + margin
+        return Mathf.Max(pinnedSlideOffsetY, pinnedRoot.rect.height + 20f);
+    }
+
 }

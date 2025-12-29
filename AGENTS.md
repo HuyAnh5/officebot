@@ -2,7 +2,7 @@
 - Project name: officebot
 - Unity version: Unity 6000.2.15f1
 - Active game object:
-  - Name: GameManagers
+  - Name: note_Rules
   - Tag: Untagged
-  - Layer: Default
+  - Layer: UI
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->

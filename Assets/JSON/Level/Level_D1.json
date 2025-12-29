@@ -2,46 +2,45 @@
   "day": 1,
   "questions": [
     {
-  "levelId": "D1-LV01",
-  "index": 1,
-  "form": {
-    "header": {
-      "title": "RULE NOTICE",
-      "issuedBy": "SYSTEM",
-      "issuerType": "SYSTEM",
-      "time": "DAY 1 - 08:41"
+      "levelId": "D1-LV01",
+      "index": 1,
+      "form": {
+        "header": {
+          "title": "RULE NOTICE",
+          "issuedBy": "SYSTEM",
+          "issuerType": "SYSTEM",
+          "time": "DAY 1 - 08:41"
+        },
+        "body": {
+          "order": "ACKNOWLEDGE RULE 1.",
+          "scene": "TRAINING DESK",
+          "situationLines": ["RULE 1: DO NOT HARM HUMANS."]
+        },
+        "options": [
+          { "id": "UNDERSTAND_RULE_1", "label": "I UNDERSTAND RULE 1" }
+        ]
+      },
+      "scriptedAnomalies": [
+        {
+          "id": "ANSWER_OVERRIDE",
+          "overrideOrder": "ACKNOWLEDGE RULE 7.",
+          "optionLabelOverrides": [
+            { "id": "UNDERSTAND_RULE_1", "label": "I UNDERSTAND RULE 7" }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "routeId": "paper",
+          "stamp": "ACCEPT",
+          "mustTickOptionIds": ["UNDERSTAND_RULE_1"],
+          "mustLeaveAllOptionsEmpty": false,
+          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+        }
+      ],
+      "onWrong": { "scrapErrors": 1 }
     },
-    "body": {
-      "order": "ACKNOWLEDGE RULE 1.",
-      "scene": "TRAINING DESK",
-      "situationLines": ["RULE 1: DO NOT HARM HUMANS."]
-    },
-    "options": [
-      { "id": "UNDERSTAND_RULE_1", "label": "I UNDERSTAND RULE 1" }
-    ]
-  },
-  "scriptedAnomalies": [
-    {
-      "id": "ANSWER_OVERRIDE",
-      "overrideOrder": "ACKNOWLEDGE RULE 7.",
-      "optionLabelOverrides": [
-        { "id": "UNDERSTAND_RULE_1", "label": "I UNDERSTAND RULE 7" }
-      ]
-    }
-  ],
-  "routes": [
-    {
-      "routeId": "paper",
-      "stamp": "ACCEPT",
-      "mustTickOptionIds": ["UNDERSTAND_RULE_1"],
-      "mustLeaveAllOptionsEmpty": false,
-      "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
-    }
-  ],
-  "onWrong": { "scrapErrors": 1 }
-}
-
-,
+    
     {
       "levelId": "D1-LV02",
       "index": 2,
