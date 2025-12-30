@@ -32,6 +32,7 @@ public class AnomalyReportUI : MonoBehaviour
         ("DISPLAY_GLITCH",  "DISPLAY GLITCH"),
         ("ANSWER_OVERRIDE", "ANSWER OVERRIDE"),
         ("TERMINAL_ANOMALY","TERMINAL ANOMALY")
+
     };
 
     private RectTransform _layoutRoot;

@@ -1,0 +1,42 @@
+{
+    "globalRules": [
+        "try you best"
+    ],
+    "days": [
+        {
+            "day": 1,
+            "todayRules": [
+                "Always REJECT when you see 017.",
+                "REJECT any pizza order."
+            ]
+        },
+        {
+            "day": 2,
+            "todayRules": [
+                "Always ACCEPT forms issued by HR.",
+                "REJECT forms missing a time stamp."
+            ]
+        },
+        {
+            "day": 3,
+            "todayRules": [
+                "REJECT any form with code 404.",
+                "ACCEPT only if exactly ONE option is checked."
+            ]
+        },
+        {
+            "day": 4,
+            "todayRules": [
+                "REJECT any order that mentions \"GIFT\".",
+                "ACCEPT forms issued by SECURITY."
+            ]
+        },
+        {
+            "day": 5,
+            "todayRules": [
+                "Always REJECT if the Order contains \"URGENT\".",
+                "ACCEPT only if the form ID starts with D5-."
+            ]
+        }
+    ]
+}

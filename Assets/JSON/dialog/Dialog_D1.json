@@ -6,7 +6,7 @@
     "showColors": false,
     "showRealNames": false
   },
-  "characters": [
+  "characters": [ 
     { "id": "john",  "realName": "John",  "day2Color": "GREEN",  "day3Color": "GREEN" },
     { "id": "lin",   "realName": "Lin",   "day2Color": "YELLOW", "day3Color": "YELLOW" },
     { "id": "maya",  "realName": "Maya",  "day2Color": "PINK",   "day3Color": "PINK" },
