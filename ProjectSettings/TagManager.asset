@@ -2,7 +2,7 @@
 %TAG !u! tag:unity3d.com,2011:
 --- !u!78 &1
 TagManager:
-  serializedVersion: 2
+  serializedVersion: 3
   tags: []
   layers:
   - Default
@@ -11,7 +11,7 @@ TagManager:
   - 
   - Water
   - UI
-  - 
+  - CCTV
   - 
   - 
   - 
@@ -41,3 +41,23 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: Ground
+    uniqueID: 851171709
+    locked: 0
+  - name: Player
+    uniqueID: 3359806805
+    locked: 0
+  - name: CCTV_BG
+    uniqueID: 3066659219
+    locked: 0
+  - name: CCTV_SORT
+    uniqueID: 2579071619
+    locked: 0
+  - name: ui
+    uniqueID: 331411287
+    locked: 0
+  - name: Table
+    uniqueID: 3221297645
+    locked: 0
+  m_RenderingLayers:
+  - Default

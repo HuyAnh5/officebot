@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -79,6 +80,50 @@ public class AnomalyDirector : MonoBehaviour
     [Header("Debug Hotkeys")]
     [SerializeField] private bool enableDebugHotkeys = true; // 1-2-3 display variants, 4 answer override pulse
 
+    private const string ID_MIMIC = "MIMIC";
+
+    [Serializable]
+    public class MimicRoute
+    {
+        [Tooltip("Tên GameObject path nằm dưới Paths (vd: Lane_Mimic_Main, Lane_Mimic_CornerA, Lane_Mimic_CornerB)")]
+        public string pathName;
+
+        [Min(0f)] public float weight = 1f;
+
+        [Tooltip("Nếu waypoint có đúng tên này thì mimic sẽ đứng lại 1 lúc (vd: Corner_A hoặc Corner_B). Để trống nếu không pause.")]
+        public string pauseWaypointName;
+
+        public Vector2 pauseSeconds = new Vector2(0.6f, 1.4f);
+    }
+
+    [Header("MIMIC (CCTV)")]
+    [SerializeField] private bool enableMimicDebugKey = true;
+    [SerializeField] private GameObject mimicPrefab;
+    [SerializeField] private Transform cctvAnchorsRoot;
+    [SerializeField] private Transform cctvPathsRoot;
+    [SerializeField] private Camera cctvCamera;
+
+    [SerializeField] private string spawnLeftName = "Spawn_Left";
+    [SerializeField] private string spawnRightName = "Spawn_Right";
+    [SerializeField] private string exitLeftName = "Exit_Left";
+    [SerializeField] private string exitRightName = "Exit_Right";
+
+    [SerializeField] private MimicRoute[] mimicRoutes;
+
+    [SerializeField, Min(0.1f)] private float mimicMoveSpeed = 2f;
+    [SerializeField, Min(0.001f)] private float mimicArriveDistance = 0.02f;
+
+    [Header("Mimic Glitch (light)")]
+    [Range(0f, 1f)][SerializeField] private float mimicSpawnBurstIntensity = 0.18f;
+    [Range(0f, 1f)][SerializeField] private float mimicSustainIntensity = 0.10f;
+    [SerializeField] private float mimicAudioMul = 0.8f;
+    [SerializeField] private bool mimicPlayBurstOnSpawn = true;
+
+    // runtime
+    private GameObject _mimicGO;
+    private Coroutine _mimicCo;
+
+
     private bool _wasDisplayActive;
 
     // runtime
@@ -134,6 +179,14 @@ public class AnomalyDirector : MonoBehaviour
         if (active)
             TickDisplayGlitch(dt);
 
+        // Nếu mimic đang tồn tại nhưng store đã bị Clear => report đúng => despawn ngay
+        if (_mimicGO != null && !PersistentAnomalyStore.IsActive("MIMIC"))
+        {
+            DespawnMimicImmediate();
+            return;
+        }
+
+
         // AnswerOverride phải chạy độc lập (nó tự check store "ANSWER_OVERRIDE")
         TickAnswerOverride(dt);
     }
@@ -165,6 +218,11 @@ public class AnomalyDirector : MonoBehaviour
             RefreshOverwrittenTargets();
             PulseOverwrittenOnce();
         }
+        if (enableMimicDebugKey && kb[Key.M].wasPressedThisFrame)
+        {
+            SpawnMimicOnce();
+        }
+
 #endif
     }
 
@@ -410,4 +468,205 @@ public class AnomalyDirector : MonoBehaviour
         }
         return null;
     }
+    // =========================
+    // MIMIC (CCTV)
+    // =========================
+    public void SpawnMimicOnce()
+    {
+        if (mimicPrefab == null || cctvAnchorsRoot == null || cctvPathsRoot == null)
+        {
+            Debug.LogWarning("[AnomalyDirector] Mimic refs missing (prefab/anchorsRoot/pathsRoot).", this);
+            return;
+        }
+
+        if (_mimicGO != null) return; // chỉ 1 con tại một thời điểm
+
+        bool leftToRight = UnityEngine.Random.value < 0.5f;
+
+        Transform spawn = FindDeepChild(cctvAnchorsRoot, leftToRight ? spawnLeftName : spawnRightName);
+        Transform exit = FindDeepChild(cctvAnchorsRoot, leftToRight ? exitRightName : exitLeftName);
+
+        if (spawn == null || exit == null)
+        {
+            Debug.LogWarning($"[AnomalyDirector] Mimic spawn/exit missing. spawn={(spawn ? spawn.name : "null")} exit={(exit ? exit.name : "null")}", this);
+            return;
+        }
+
+        MimicRoute route = PickMimicRoute();
+        if (route == null)
+        {
+            Debug.LogWarning("[AnomalyDirector] No mimicRoutes configured.", this);
+            return;
+        }
+
+        Transform pathRoot = FindDeepChild(cctvPathsRoot, route.pathName);
+        if (pathRoot == null)
+        {
+            Debug.LogWarning($"[AnomalyDirector] Mimic path '{route.pathName}' not found under Paths.", this);
+            return;
+        }
+
+        List<Transform> wps = GetDirectChildren(pathRoot);
+        if (!leftToRight) wps.Reverse();
+
+        _mimicGO = Instantiate(mimicPrefab, spawn.position, Quaternion.identity);
+        _mimicGO.name = "Mimic_Instance";
+        _mimicGO.transform.position = spawn.position;
+
+        PersistentAnomalyStore.SetActive("MIMIC", true);
+
+        // Burst glitch khi xuất hiện (nhẹ). Nếu DISPLAY_GLITCH đang active thì thôi.
+        if (techGlitch != null && !PersistentAnomalyStore.IsActive(ID_DISPLAY))
+        {
+            Vector2 pos01 = WorldToPos01(_mimicGO.transform.position);
+            techGlitch.ApplyCue(mimicSpawnBurstIntensity, pos01, mimicAudioMul, playBurst: mimicPlayBurstOnSpawn);
+        }
+
+        _mimicCo = StartCoroutine(CoRunMimic(spawn, wps, exit, route.pauseWaypointName, route.pauseSeconds));
+    }
+
+    private IEnumerator CoRunMimic(Transform spawn, List<Transform> wps, Transform exit, string pauseWpName, Vector2 pauseRange)
+    {
+        // đi qua waypoints
+        if (wps != null)
+        {
+            for (int i = 0; i < wps.Count; i++)
+            {
+                var wp = wps[i];
+                if (wp == null) continue;
+
+                yield return CoMoveTo(wp.position);
+
+                if (!string.IsNullOrEmpty(pauseWpName) && wp.name == pauseWpName)
+                {
+                    float t = UnityEngine.Random.Range(pauseRange.x, pauseRange.y);
+                    yield return CoWait(t);
+                }
+            }
+        }
+
+        // ra exit để không xuyên tường
+        if (exit != null)
+            yield return CoMoveTo(exit.position);
+
+        // cleanup
+        if (_mimicGO != null) Destroy(_mimicGO);
+        _mimicGO = null;
+
+        PersistentAnomalyStore.SetActive("MIMIC", false);
+
+        // chỉ clear cue nếu DISPLAY_GLITCH không active (tránh tắt nhầm)
+        if (techGlitch != null && !PersistentAnomalyStore.IsActive(ID_DISPLAY))
+            techGlitch.ClearCue();
+
+        _mimicCo = null;
+    }
+
+    private IEnumerator CoMoveTo(Vector3 target)
+    {
+        float arriveSqr = mimicArriveDistance * mimicArriveDistance;
+
+        while (_mimicGO != null && (_mimicGO.transform.position - target).sqrMagnitude > arriveSqr)
+        {
+            float dt = Time.unscaledDeltaTime;
+            _mimicGO.transform.position = Vector3.MoveTowards(_mimicGO.transform.position, target, mimicMoveSpeed * dt);
+            yield return null;
+        }
+    }
+
+    private IEnumerator CoWait(float seconds)
+    {
+        float t = 0f;
+        while (t < seconds)
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+    }
+
+    private void TickMimicGlitch()
+    {
+        if (techGlitch == null) return;
+        if (_mimicGO == null) return;
+
+        // DISPLAY_GLITCH ưu tiên cao hơn -> mimic không được override
+        if (PersistentAnomalyStore.IsActive(ID_DISPLAY)) return;
+
+        Vector2 pos01 = WorldToPos01(_mimicGO.transform.position);
+        techGlitch.ApplyCue(mimicSustainIntensity, pos01, mimicAudioMul, playBurst: false);
+    }
+
+    private Vector2 WorldToPos01(Vector3 worldPos)
+    {
+        if (cctvCamera == null) return new Vector2(0.5f, 0.85f);
+        Vector3 v = cctvCamera.WorldToViewportPoint(worldPos);
+        return new Vector2(Mathf.Clamp01(v.x), Mathf.Clamp01(v.y));
+    }
+
+    private MimicRoute PickMimicRoute()
+    {
+        if (mimicRoutes == null || mimicRoutes.Length == 0) return null;
+
+        float total = 0f;
+        for (int i = 0; i < mimicRoutes.Length; i++)
+            if (mimicRoutes[i] != null && !string.IsNullOrEmpty(mimicRoutes[i].pathName) && mimicRoutes[i].weight > 0f)
+                total += mimicRoutes[i].weight;
+
+        if (total <= 0f) return null;
+
+        float roll = UnityEngine.Random.value * total;
+        float acc = 0f;
+
+        for (int i = 0; i < mimicRoutes.Length; i++)
+        {
+            var r = mimicRoutes[i];
+            if (r == null || string.IsNullOrEmpty(r.pathName) || r.weight <= 0f) continue;
+
+            acc += r.weight;
+            if (roll <= acc) return r;
+        }
+        return mimicRoutes[mimicRoutes.Length - 1];
+    }
+
+    private static List<Transform> GetDirectChildren(Transform root)
+    {
+        var list = new List<Transform>(root.childCount);
+        for (int i = 0; i < root.childCount; i++)
+            list.Add(root.GetChild(i));
+        return list;
+    }
+
+    private static Transform FindDeepChild(Transform root, string name)
+    {
+        if (root == null || string.IsNullOrEmpty(name)) return null;
+
+        var q = new Queue<Transform>();
+        q.Enqueue(root);
+
+        while (q.Count > 0)
+        {
+            var t = q.Dequeue();
+            if (t.name == name) return t;
+            for (int i = 0; i < t.childCount; i++)
+                q.Enqueue(t.GetChild(i));
+        }
+        return null;
+    }
+
+    private void DespawnMimicImmediate()
+    {
+        if (_mimicCo != null) StopCoroutine(_mimicCo);
+        _mimicCo = null;
+
+        if (_mimicGO != null) Destroy(_mimicGO);
+        _mimicGO = null;
+
+        // store đã bị Clear bởi LevelManager rồi, nhưng set false lại cũng không sao
+        PersistentAnomalyStore.SetActive("MIMIC", false);
+
+        if (techGlitch != null && !PersistentAnomalyStore.IsActive("DISPLAY_GLITCH"))
+            techGlitch.ClearCue();
+    }
+
+
 }

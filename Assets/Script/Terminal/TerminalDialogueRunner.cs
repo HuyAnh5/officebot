@@ -119,7 +119,12 @@ public class TerminalDialogueRunner : MonoBehaviour
             // giữ ở cuối câu (cursor nhấp nháy ở đây)
             yield return new WaitForSeconds(UnityEngine.Random.Range(postLineHoldMin, postLineHoldMax));
 
-            if (!orderShown && seg.terminalOrder != null && seg.terminalOrder.showAfterLineIndex >= 0 && i == seg.terminalOrder.showAfterLineIndex)
+            if (!orderShown
+                && seg.terminalOrder != null
+                && !string.IsNullOrEmpty(seg.terminalOrder.text)
+                && seg.terminalOrder.showAfterLineIndex >= 0
+                && i == seg.terminalOrder.showAfterLineIndex)
+
             {
                 terminal.ShowPinnedOrder(seg.terminalOrder.text, seg.terminalOrder.autoHideAfterSec);
                 orderShown = true;
@@ -134,7 +139,11 @@ public class TerminalDialogueRunner : MonoBehaviour
         // Segment kết thúc: giữ cursor ở cuối câu cuối (không commit thêm, không tạo prefix mới)
         terminal.SetPlaybackActive(false);
 
-        if (!orderShown && seg.terminalOrder != null && seg.terminalOrder.showAfterLineIndex < 0)
+        if (!orderShown
+            && seg.terminalOrder != null
+            && !string.IsNullOrEmpty(seg.terminalOrder.text)
+            && seg.terminalOrder.showAfterLineIndex < 0)
+
         {
             terminal.ShowPinnedOrder(seg.terminalOrder.text, seg.terminalOrder.autoHideAfterSec);
             orderShown = true;

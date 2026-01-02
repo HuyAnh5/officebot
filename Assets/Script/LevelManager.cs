@@ -99,6 +99,13 @@ public class LevelManager : MonoBehaviour
     private const string PREF_AWARENESS = "FORMGAME_AWARENESS";
 
     // =========================
+    // CCTV
+    // =========================
+
+    [SerializeField] private CCTVDirector cctv;
+
+
+    // =========================
     // Unity
     // =========================
     private void Awake()
@@ -258,6 +265,10 @@ public class LevelManager : MonoBehaviour
             baseQuestion = questions[index];
             displayQuestion = CloneQuestion(baseQuestion);
 
+            // CCTV: start level beat
+            if (cctv != null)
+                cctv.PlayLevel(baseQuestion.levelId);
+
             // Apply scripted anomalies (ANSWER_OVERRIDE).
             OverwriteMarks marks = ApplyScriptedAnswerOverride(baseQuestion, displayQuestion);
 
@@ -267,7 +278,7 @@ public class LevelManager : MonoBehaviour
             ApplyOverwriteMarkers(marks);
 
             // start/stop local burst
-            
+
 
             form.SetLocked(false);
 
@@ -277,6 +288,10 @@ public class LevelManager : MonoBehaviour
         else
         {
             var lv = levels[index];
+
+            // CCTV: start level beat
+            if (cctv != null)
+                cctv.PlayLevel(lv.id);
 
             string displayedOrder = (lv.tampered && !string.IsNullOrEmpty(lv.tamperVariant))
                 ? lv.tamperVariant
@@ -296,6 +311,7 @@ public class LevelManager : MonoBehaviour
         SaveProgress();
         SyncDebugInspector();
     }
+
 
     private string[] BuildSecurityDetailsToShow(LevelData lv)
     {
@@ -639,6 +655,10 @@ public class LevelManager : MonoBehaviour
 
         busy = true;
 
+        // CCTV: end level beat (send actors to exit)
+        if (cctv != null)
+            cctv.EndLevel(true);
+
         if (dialogue != null)
         {
             dialogue.DumpRemainingNow();
@@ -648,6 +668,7 @@ public class LevelManager : MonoBehaviour
         SetStampButtonsInteractable(false);
         StartCoroutine(CommitRoutine(accept));
     }
+
 
 
     private IEnumerator CommitRoutine(bool accept)
