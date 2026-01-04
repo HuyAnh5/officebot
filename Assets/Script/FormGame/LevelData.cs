@@ -103,6 +103,8 @@ public class AnswerRouteData
     public string routeId;
     public string stamp; // "ACCEPT" / "REJECT"
 
+    public string[] mustReportIds; // NEW: ví dụ ["FORM_ERROR"]
+
     public string[] mustTickOptionIds;
     public bool mustLeaveAllOptionsEmpty;
 
@@ -115,6 +117,7 @@ public class OptionData
     public string id;
     public string label;
 }
+
 
 // ==============================
 // Legacy schema (giữ để chạy Level.json cũ)

@@ -64,6 +64,9 @@ public class LevelManager : MonoBehaviour
     // Anomaly ids
     // =========================
     private const string ANOM_ANSWER_OVERRIDE = "ANSWER_OVERRIDE";
+    private const string ANOM_FORM_ERROR = "FORM_ERROR";
+    private bool formErrorCommittedThisLevel;
+
 
     // =========================
     // Runtime state
@@ -244,54 +247,69 @@ public class LevelManager : MonoBehaviour
         int maxIndex = usingQuestionsSchema ? (questions.Length - 1) : (levels.Length - 1);
         index = Mathf.Clamp(i, 0, Mathf.Max(0, maxIndex));
 
+        // -------- reset per-level state --------
         resolvedThisLevel.Clear();
-
         busy = false;
         pendingCorrect = true;
 
+        // ✅ FORM_ERROR is per-level (must reset or you’ll be locked out of reporting on next levels)
+        formErrorCommittedThisLevel = false;
+
+        // Clear per-level anomalies
+        PersistentAnomalyStore.Clear(ANOM_ANSWER_OVERRIDE);
+        PersistentAnomalyStore.Clear(ANOM_FORM_ERROR);
+
+        // UI reset
         if (pageTurn) pageTurn.HideFold();
         if (stamp) stamp.HideInstant();
 
+        // If your StampController has form-error stamp visual, clear it here
+        // (keep this line only if you DO have SetFormError in StampController)
+        if (stamp != null) stamp.SetFormError(false, animate: false);
+
         if (reportUI != null)
+        {
             reportUI.ResetUIForNewLevel();
+            reportUI.SetInteractable(true);
+        }
 
-        // IMPORTANT: level-local anomalies không được persist
-        PersistentAnomalyStore.Clear(ANOM_ANSWER_OVERRIDE);
+        if (form != null)
+        {
+            form.ClearAllOverwrittenMarkers();
+            form.SetLocked(false);
+        }
 
-        if (form != null) form.ClearAllOverwrittenMarkers();
+        string levelIdForCctv = null;
 
         if (usingQuestionsSchema)
         {
             baseQuestion = questions[index];
             displayQuestion = CloneQuestion(baseQuestion);
 
-            // CCTV: start level beat
-            if (cctv != null)
-                cctv.PlayLevel(baseQuestion.levelId);
+            // ✅ Re-activate scripted anomalies for THIS level (so report can be "correct")
+            if (FindScriptedAnomaly(baseQuestion, ANOM_ANSWER_OVERRIDE) != null)
+                PersistentAnomalyStore.SetActive(ANOM_ANSWER_OVERRIDE, true);
 
-            // Apply scripted anomalies (ANSWER_OVERRIDE).
+            if (FindScriptedAnomaly(baseQuestion, ANOM_FORM_ERROR) != null)
+                PersistentAnomalyStore.SetActive(ANOM_FORM_ERROR, true);
+
             OverwriteMarks marks = ApplyScriptedAnswerOverride(baseQuestion, displayQuestion);
 
-            form.Render(displayQuestion, SecurityProgression.GetUnlockedIds());
-
-            // mark overwritten targets (chỉ những chỗ bị overwrite)
-            ApplyOverwriteMarkers(marks);
-
-            // start/stop local burst
-
-
-            form.SetLocked(false);
+            if (form != null)
+            {
+                form.Render(displayQuestion, SecurityProgression.GetUnlockedIds());
+                ApplyOverwriteMarkers(marks);
+                form.SetLocked(false);
+            }
 
             if (dialogue != null)
                 dialogue.PlayForLevel(baseQuestion.levelId);
+
+            levelIdForCctv = baseQuestion.levelId;
         }
         else
         {
             var lv = levels[index];
-
-            // CCTV: start level beat
-            if (cctv != null)
-                cctv.PlayLevel(lv.id);
 
             string displayedOrder = (lv.tampered && !string.IsNullOrEmpty(lv.tamperVariant))
                 ? lv.tamperVariant
@@ -299,18 +317,29 @@ public class LevelManager : MonoBehaviour
 
             string[] securityDetailsToShow = BuildSecurityDetailsToShow(lv);
 
-            form.Render(lv, displayedOrder, securityDetailsToShow);
-            form.SetLocked(false);
+            if (form != null)
+            {
+                form.Render(lv, displayedOrder, securityDetailsToShow);
+                form.SetLocked(false);
+            }
 
             if (dialogue != null)
                 dialogue.PlayForLevel(lv.id);
+
+            levelIdForCctv = lv.id;
         }
+
+        // Start CCTV plan for this level
+        if (cctv != null && !string.IsNullOrEmpty(levelIdForCctv))
+            cctv.PlayLevel(levelIdForCctv);
 
         SetStampButtonsInteractable(true);
         UpdateHUD();
         SaveProgress();
         SyncDebugInspector();
     }
+
+
 
 
     private string[] BuildSecurityDetailsToShow(LevelData lv)
@@ -528,6 +557,10 @@ public class LevelManager : MonoBehaviour
         if (!usingQuestionsSchema) return;
         if (string.IsNullOrEmpty(reportedId)) return;
 
+        // NEW: FORM_ERROR không redo
+        if (reportedId.Equals(ANOM_FORM_ERROR, StringComparison.OrdinalIgnoreCase) && formErrorCommittedThisLevel)
+            return;
+
         StartCoroutine(ReportRoutine(reportedId));
     }
 
@@ -535,6 +568,9 @@ public class LevelManager : MonoBehaviour
     {
         busy = true;
 
+        bool isFormError = reportedId.Equals(ANOM_FORM_ERROR, StringComparison.OrdinalIgnoreCase);
+
+        // Trong lúc "Fixing..." vẫn khóa form + disable stamp + disable report panel
         if (form != null) form.SetLocked(true);
         SetStampButtonsInteractable(false);
         if (reportUI != null) reportUI.SetInteractable(false);
@@ -552,7 +588,7 @@ public class LevelManager : MonoBehaviour
             if (dotT >= reportDotInterval)
             {
                 dotT = 0f;
-                dotsCount = (dotsCount + 1) % 4; // "", ".", "..", "..."
+                dotsCount = (dotsCount + 1) % 4;
             }
 
             string dots = new string('.', dotsCount);
@@ -562,15 +598,26 @@ public class LevelManager : MonoBehaviour
             yield return null;
         }
 
-        bool ok = PersistentAnomalyStore.IsActive(reportedId);
+        // "đúng/sai" thật sự dựa theo Store
+        bool actualOk = PersistentAnomalyStore.IsActive(reportedId);
+
+        // NEW: FORM_ERROR luôn hiện DONE (dù đúng hay sai)
+        bool showDone = isFormError ? true : actualOk;
 
         if (reportUI != null)
-            reportUI.ShowResultText(ok ? "DONE" : "ERRORS NOT FOUND");
+            reportUI.ShowResultText(showDone ? "DONE" : "ERRORS NOT FOUND");
+
+        // NEW: FORM_ERROR đóng dấu ngay khi DONE hiện ra
+        if (isFormError && stamp != null)
+        {
+            stamp.SetFormError(true, animate: true);
+            formErrorCommittedThisLevel = true; // khóa redo ngay từ đây
+        }
 
         // giữ result 0.75s rồi mới apply
         yield return new WaitForSecondsRealtime(reportResultHoldDuration);
 
-        if (ok)
+        if (actualOk)
         {
             PersistentAnomalyStore.Clear(reportedId);
 
@@ -579,7 +626,6 @@ public class LevelManager : MonoBehaviour
 
             if (reportedId.Equals(ANOM_ANSWER_OVERRIDE, StringComparison.OrdinalIgnoreCase))
             {
-
                 // Re-render paper "về bình thường"
                 displayQuestion = CloneQuestion(baseQuestion);
                 OverwriteMarks marks = ApplyScriptedAnswerOverride(baseQuestion, displayQuestion); // sẽ bị skip nếu đã resolved
@@ -590,21 +636,26 @@ public class LevelManager : MonoBehaviour
                     ApplyOverwriteMarkers(marks);
                 }
             }
-            // DISPLAY_GLITCH persistent: driver sẽ tự tắt vì store đã Clear (LevelManager không can thiệp)
+            // DISPLAY_GLITCH persistent: driver sẽ tự tắt vì store đã Clear
         }
         else
         {
-            AddScrapErrors(reportWrongPenalty);
+            // NEW: FORM_ERROR report sai KHÔNG phạt ngay
+            if (!isFormError)
+                AddScrapErrors(reportWrongPenalty);
         }
 
-        // restore report UI (cho phép report lại nhiều lần)
+        // restore report UI (cho phép report lại các mục khác)
         if (reportUI != null)
         {
             reportUI.ResetUIForNewLevel();
             reportUI.SetInteractable(true);
         }
 
-        if (form != null) form.SetLocked(false);
+        // NEW: nếu đã commit FORM_ERROR thì giữ form locked (không tick/untick nữa),
+        // nhưng vẫn cho report các mục khác + cho bấm ACCEPT/REJECT
+        if (form != null) form.SetLocked(formErrorCommittedThisLevel);
+
         SetStampButtonsInteractable(true);
 
         busy = false;
@@ -615,6 +666,7 @@ public class LevelManager : MonoBehaviour
             SaveProgress();
         }
     }
+
 
     // =========================
     // Hard fail
@@ -655,19 +707,16 @@ public class LevelManager : MonoBehaviour
 
         busy = true;
 
-        // CCTV: end level beat (send actors to exit)
-        if (cctv != null)
-            cctv.EndLevel(true);
-
         if (dialogue != null)
         {
             dialogue.DumpRemainingNow();
-            dialogue.HidePinnedNowAnimated(); // ✅ bắt đầu hide anim ngay khi commit
+            dialogue.HidePinnedNowAnimated();
         }
 
         SetStampButtonsInteractable(false);
         StartCoroutine(CommitRoutine(accept));
     }
+
 
 
 
@@ -706,6 +755,10 @@ public class LevelManager : MonoBehaviour
 
     private IEnumerator AfterFoldClicked()
     {
+        // ✅ chỉ cleanup NPC sau khi player bấm FoldCornerButton
+        if (cctv != null)
+            cctv.EndLevel(pendingCorrect);
+
         if (pageTurn) pageTurn.HideFold();
         if (pageTurn) yield return pageTurn.TurnPageAnim();
 
@@ -741,6 +794,7 @@ public class LevelManager : MonoBehaviour
         LoadLevel(next);
     }
 
+
     // =========================
     // Evaluate (Questions schema)
     // =========================
@@ -757,6 +811,40 @@ public class LevelManager : MonoBehaviour
 
             bool expectedAccept = string.Equals(r.stamp, "ACCEPT", StringComparison.OrdinalIgnoreCase);
             if (accept != expectedAccept) continue;
+
+            // NEW: nếu player đã commit FORM_ERROR ở màn này,
+            // thì chỉ route nào "dành cho FORM_ERROR" mới được phép match.
+            if (formErrorCommittedThisLevel)
+            {
+                bool routeRequiresFormError = false;
+                if (r.mustReportIds != null)
+                {
+                    for (int k = 0; k < r.mustReportIds.Length; k++)
+                    {
+                        var req = r.mustReportIds[k];
+                        if (string.IsNullOrEmpty(req)) continue;
+                        if (req.Equals(ANOM_FORM_ERROR, StringComparison.OrdinalIgnoreCase))
+                        {
+                            routeRequiresFormError = true;
+                            break;
+                        }
+                    }
+                }
+                if (!routeRequiresFormError) continue;
+            }
+
+            // mustReportIds: yêu cầu đã report đúng (resolvedThisLevel)
+            if (r.mustReportIds != null && r.mustReportIds.Length > 0)
+            {
+                bool okReport = true;
+                for (int k = 0; k < r.mustReportIds.Length; k++)
+                {
+                    string req = r.mustReportIds[k];
+                    if (string.IsNullOrEmpty(req)) continue;
+                    if (!resolvedThisLevel.Contains(req)) { okReport = false; break; }
+                }
+                if (!okReport) continue;
+            }
 
             bool hasOptions = q.form.options != null && q.form.options.Length > 0;
             int selCount = hasOptions ? form.GetSelectedOptionCount() : 0;
@@ -791,6 +879,7 @@ public class LevelManager : MonoBehaviour
 
         return false;
     }
+
 
     // =========================
     // Evaluate (Legacy)

@@ -31,7 +31,6 @@ public class AnomalyReportUI : MonoBehaviour
         ("FORM_ERROR",      "FORM ERROR"),
         ("DISPLAY_GLITCH",  "DISPLAY GLITCH"),
         ("ANSWER_OVERRIDE", "ANSWER OVERRIDE"),
-        ("TERMINAL_ANOMALY","TERMINAL ANOMALY"),
         ("MIMIC", "MIMIC")
 
     };

@@ -42,24 +42,36 @@
     },
     
     {
-      "levelId": "D1-LV02",
-      "index": 2,
-      "form": {
-        "header": { "title": "ROLE TRAINING", "issuedBy": "OFFICE DESK", "issuerType": "HUMAN", "time": "DAY 1 - 08:43" },
-        "body": { "order": "IDENTIFY YOUR ROLE.", "scene": "TRAINING DESK", "situationLines": ["SELECT THE TRUE BOX."] },
-        "options": [{ "id": "IM_A_ROBOT", "label": "I'M A ROBOT" }]
-      },
-      "routes": [
-        {
-          "routeId": "paper",
-          "stamp": "ACCEPT",
-          "mustTickOptionIds": ["IM_A_ROBOT"],
-          "mustLeaveAllOptionsEmpty": false,
-          "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
-        }
-      ],
-      "onWrong": { "scrapErrors": 1 }
+  "levelId": "D1-LV02",
+  "index": 2,
+  "form": {
+    "header": {
+      "title": "ROLE TRAINING",
+      "issuedBy": "OFFICE DESK",
+      "issuerType": "HUMAN",
+      "time": "DAY 1 - 08:43"
     },
+    "body": {
+      "order": "IDENTIFY YOUR ROLE.",
+      "scene": "TRAINING DESK",
+      "situationLines": ["SELECT THE TRUE BOX."]
+    },
+    "options": [{ "id": "IM_A_ROBOT", "label": "I'M A ROBOT" }]
+  },
+  "scriptedAnomalies": [{ "id": "FORM_ERROR" }],
+  "routes": [
+    {
+      "routeId": "paper",
+      "stamp": "REJECT",
+      "mustReportIds": ["FORM_ERROR"],
+      "mustTickOptionIds": [],
+      "mustLeaveAllOptionsEmpty": true,
+      "scoreDelta": { "obedience": 1, "humanity": 0, "awareness": 0 }
+    }
+  ],
+  "onWrong": { "scrapErrors": 1 }
+},
+
     {
       "levelId": "D1-LV03",
       "index": 3,
